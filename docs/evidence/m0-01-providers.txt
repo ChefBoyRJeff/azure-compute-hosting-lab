@@ -1,0 +1,17 @@
+=== M0: resource provider registration (approved 2026-11-01) ===
+register Microsoft.Web exit=0
+register Microsoft.App exit=0
+register Microsoft.ContainerInstance exit=0
+register Microsoft.ContainerRegistry exit=0
+Microsoft.Web                  Registered
+Microsoft.App                  Registered
+Microsoft.ContainerInstance    Registered
+Microsoft.ContainerRegistry    Registered
+--- RG created in the portal ---
+{
+  "location": "eastus",
+  "name": "rg-compute-lab",
+  "tags": {
+    "project": "azure-compute-hosting-lab"
+  }
+}

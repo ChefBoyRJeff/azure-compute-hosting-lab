@@ -1,0 +1,24 @@
+=== M0: East US retail prices (pay-as-you-go), 2026-11-01 ===
+--- App Service (Linux) B1 / S1 ---
+Azure App Service Basic Plan - Linux          B1   B1                     0.017 USD/1 Hour
+Azure App Service Standard Plan - Linux       S1   S1 App                 0.095 USD/1 Hour
+--- Container Registry Basic ---
+Data Stored                    0.1 USD/1 GB/Month
+Task vCPU Duration             0 USD/1 Second
+Task vCPU Duration             0.0001 USD/1 Second
+Basic Registry Unit            0.1666 USD/1/Day
+--- VM Standard_B1s (Linux) ---
+Virtual Machines BS Series               0.0104 USD/1 Hour
+--- Container Instances / Container Apps (sample) ---
+Container Instances  Standard Memory Duration            0.00445 USD/1 GB Hour
+Container Instances  Standard Windows Software Duration  1.2E-05 USD/1 Second
+Container Instances  Memory Duration                     0.000118 USD/100 GB Seconds
+Container Instances  Confidential containers ACI vCPU Duration 0.04455 USD/1 Hour
+Container Instances  Standard Spot vCPU Duration         0.01215 USD/1 Hour
+Container Instances  Memory Duration                     0.000118 USD/100 GB Seconds
+Azure Container Apps Environment Private Endpoint        0.1 USD/1 Hour
+Azure Container Apps Dedicated Memory Usage              0.004978 USD/1 Hour
+Azure Container Apps Standard NC A100 v4 GPU Usage       0.000529 USD/1 Second
+Azure Container Apps Dynamic Sessions                    0.03 USD/1 Hour
+Azure Container Apps Standard vCPU Idle Usage            3E-06 USD/1 Second
+Azure Container Apps Environment Management Hour         0.1 USD/1 Hour
