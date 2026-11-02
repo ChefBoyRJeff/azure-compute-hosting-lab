@@ -1,0 +1,23 @@
+=== M1a: App Service plan + web app (portal). Created after two quota-blocked attempts; see m1-00. ===
+{
+  "ftps": "FtpsOnly",
+  "httpsOnly": true,
+  "minTls": "1.2",
+  "runtime": "PHP|8.5",
+  "state": "Running"
+}
+GET https://<app-host>/ -> HTTP 200, 4591 bytes
+{
+  "linux": null,
+  "location": "West US 3",
+  "name": "asp-compute-lab",
+  "sku": "P0v3",
+  "tier": "Premium0V3",
+  "workers": 1,
+  "zoneRedundant": null
+}
+Timeline (UTC): ~15:02-15:03 P0v4 create failed preflight "Current Limit (P0v4 VMs): 0"; 15:09:36 retry with same settings Succeeded (only deployment record in the RG).
+Hypothesis (not confirmed): App Service quota for this subscription/region was initialized between attempts, possibly triggered by the quota request or ticket. Support ticket still open.
+Portal defaults observed: httpsOnly=true, minTls=1.2, ftpsState=FtpsOnly, basic auth disabled.
+Correction: the 15:09:36 deployment did NOT use the same settings. The plan was created as P0v3 in West US 3 (not P0v4 in East US).
+Approval (2026-11-02): Jeff approved keeping P0v3 Linux in West US 3 at 0.0775 USD/hour (vs. approved P0v4 East US at 0.073). Region and plan were changed in the portal to get past the East US quota block. Plan to be deleted at end of session.

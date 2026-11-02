@@ -1,0 +1,56 @@
+=== M1d: broken v3 in staging; warm-up ping /health.php must return 200 or the swap stops ===
+--- staging /health.php ---
+--- production before the swap attempt ---
+app_version=v1
+slot_setting=production
+instance=6489fea0
+
+--- after the failed swap attempt (portal) ---
+Portal notification: Failed to swap slots 'staging' and 'production': Cannot swap slots for site because the application initialization in 'staging' slot either took too long or failed.
+--- staging /health.php ---
+HTTP 404
+--- production (must still be v1) ---
+app_version=v1
+slot_setting=production
+instance=6489fea0
+
+--- staging / ---
+app_version=v3
+slot_setting=staging
+instance=6489fea0
+
+--- swap operations since 15:39 UTC ---
+11/2/2026 3:26:18 PM  SwapWebSite                                      Started
+11/2/2026 3:26:18 PM  Microsoft.Web/sites/slots/slotsSwap/action       Started
+11/2/2026 3:26:20 PM  SwapWebSite                                      Succeeded
+11/2/2026 3:26:20 PM  Microsoft.Web/sites/slots/slotsSwap/action       Accepted
+11/2/2026 3:27:27 PM  Microsoft.Web/sites/slots/SlotsSwap/action       Succeeded
+11/2/2026 3:27:38 PM  Microsoft.Web/sites/slots/slotsSwap/action       Succeeded
+11/2/2026 3:28:33 PM  Microsoft.Web/sites/slots/slotsSwap/action       Started
+11/2/2026 3:28:36 PM  SwapWebSite                                      Started
+11/2/2026 3:28:39 PM  SwapWebSite                                      Succeeded
+11/2/2026 3:28:39 PM  Microsoft.Web/sites/slots/slotsSwap/action       Accepted
+11/2/2026 3:29:45 PM  Microsoft.Web/sites/slots/SlotsSwap/action       Succeeded
+11/2/2026 3:29:57 PM  Microsoft.Web/sites/slots/slotsSwap/action       Succeeded
+--- remediation: health.php fixed in staging ---
+staging health: HTTP 200
+--- after swap of fixed v3 ---
+--- production ---
+app_version=v3
+slot_setting=production
+instance=6489fea0
+
+--- staging ---
+app_version=v1
+slot_setting=production
+instance=6489fea0
+
+--- staging 30 s later ---
+app_version=v1
+slot_setting=staging
+instance=6489fea0
+
+Observations (recorded honestly):
+1. Broken staging health returned HTTP 404 (not the intended 500). Hypothesis: the broken health.php wasn't in the package at that path. Either way warm-up got a non-200 and the swap stopped.
+2. The failed swap attempt did not appear as a slotsSwap entry in the activity log within ~5 min. Hypothesis: warm-up abort is reported by the App Service platform (portal notification) rather than as a failed ARM operation, or logging delay. Not confirmed.
+3. Immediately after the successful swap, staging showed slot_setting=production; expected to settle to staging after the slot restarts.

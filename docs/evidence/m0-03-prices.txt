@@ -22,3 +22,7 @@ Azure Container Apps Standard NC A100 v4 GPU Usage       0.000529 USD/1 Second
 Azure Container Apps Dynamic Sessions                    0.03 USD/1 Hour
 Azure Container Apps Standard vCPU Idle Usage            3E-06 USD/1 Second
 Azure Container Apps Environment Management Hour         0.1 USD/1 Hour
+Azure App Service Premium v4 Plan                P0v4  P0v4         0.119 USD/1 Hour
+Azure App Service Premium v4 Plan - Linux        P1v4  P1v4         0.146 USD/1 Hour
+Azure App Service Premium v4 Plan - Linux        P0v4  P0v4         0.073 USD/1 Hour
+Azure App Service Premium v4 Plan                P1v4  P1v4         0.238 USD/1 Hour

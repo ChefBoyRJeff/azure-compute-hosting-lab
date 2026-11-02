@@ -1,0 +1,71 @@
+=== M1c: staging slot + v2 deployed to staging only ===
+--- production ---
+app_version=v1
+slot_setting=production
+instance=6489fea0
+
+--- staging ---
+app_version=v2
+slot_setting=staging
+instance=6489fea0
+
+=== after swap (staging -> production) ===
+--- production ---
+app_version=v2
+slot_setting=production
+instance=6489fea0
+
+--- staging ---
+app_version=v1
+slot_setting=production
+instance=6489fea0
+
+=== after swap (staging -> production) ===
+--- production ---
+app_version=v1
+slot_setting=production
+instance=6489fea0
+
+--- staging ---
+app_version=v2
+slot_setting=production
+instance=6489fea0
+
+--- swap status check ---
+{
+  "destinationSlotName": "Production",
+  "sourceSlotName": "staging",
+  "timestampUtc": "2026-11-02T15:29:45.575000+00:00"
+}
+--- production (30 s later) ---
+app_version=v1
+slot_setting=production
+instance=6489fea0
+
+--- staging (30 s later) ---
+app_version=v2
+slot_setting=staging
+instance=6489fea0
+
+=== diagnosis: swap reported success but production still v1 ===
+--- swap operations in the activity log (last 45 min) ---
+11/2/2026 3:26:18 PM  SwapWebSite                                             Started    APP-COMPUTE-LAB-3026(STAGING)
+11/2/2026 3:26:18 PM  Microsoft.Web/sites/slots/slotsSwap/action              Started    staging
+11/2/2026 3:26:20 PM  SwapWebSite                                             Succeeded  APP-COMPUTE-LAB-3026(STAGING)
+11/2/2026 3:26:20 PM  Microsoft.Web/sites/slots/slotsSwap/action              Accepted   staging
+11/2/2026 3:27:27 PM  Microsoft.Web/sites/slots/SlotsSwap/action              Succeeded  STAGING
+11/2/2026 3:28:33 PM  Microsoft.Web/sites/slots/slotsSwap/action              Started    staging
+11/2/2026 3:28:36 PM  SwapWebSite                                             Started    APP-COMPUTE-LAB-3026(STAGING)
+11/2/2026 3:28:39 PM  SwapWebSite                                             Succeeded  APP-COMPUTE-LAB-3026(STAGING)
+11/2/2026 3:28:39 PM  Microsoft.Web/sites/slots/slotsSwap/action              Accepted   staging
+--- fresh requests (cache-busting query string) ---
+app_version=v1
+slot_setting=production
+instance=6489fea0
+
+app_version=v2
+slot_setting=staging
+instance=6489fea0
+
+Finding: two swaps were performed before the first check (15:26:18-15:27:27 and 15:28:33-~15:29:45 UTC, about 70 s each), so swap + rollback both succeeded but production=v2 was never observed. The "staging shows slot_setting=production" reading was swap 2's phase 1 (target slot settings applied to the source slot during warm-up).
+Runbook fix: verify after each individual swap.

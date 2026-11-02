@@ -1,0 +1,229 @@
+=== M1e: scale up P0v3 -> P1v3 -> P0v3 (portal); approved 2026-11-02; P1v3 Linux westus3 = $0.15/h ===
+16:48:22Z  before: sku=P0v3 workers=1 instance=15c23cca
+--- availability probe during scale-up (every 2 s) ---
+16:49:55Z  instance=15c23cca
+16:49:58Z  instance=15c23cca
+16:50:00Z  instance=15c23cca
+16:50:02Z  instance=15c23cca
+16:50:04Z  instance=15c23cca
+16:50:07Z  instance=15c23cca
+16:50:09Z  instance=15c23cca
+16:50:11Z  instance=15c23cca
+16:50:13Z  instance=15c23cca
+16:50:16Z  instance=15c23cca
+16:50:18Z  instance=15c23cca
+16:50:20Z  instance=15c23cca
+16:50:22Z  instance=15c23cca
+16:50:24Z  instance=15c23cca
+16:50:27Z  instance=15c23cca
+16:50:29Z  instance=15c23cca
+16:50:31Z  instance=15c23cca
+16:50:33Z  instance=15c23cca
+16:50:36Z  instance=15c23cca
+16:50:38Z  instance=15c23cca
+16:50:40Z  instance=15c23cca
+16:50:42Z  instance=15c23cca
+16:50:45Z  instance=15c23cca
+16:50:47Z  instance=15c23cca
+16:50:49Z  instance=15c23cca
+16:50:51Z  ERROR The request was canceled due to the configured HttpClient.Timeout of 10 seconds elapsing.
+16:51:03Z  ERROR Response status code does not indicate success: 503 (Service Unavailable).
+16:51:06Z  ERROR Response status code does not indicate success: 503 (Service Unavailable).
+16:51:08Z  instance=604bcd55
+16:51:18Z  instance=604bcd55
+16:51:20Z  instance=604bcd55
+16:51:22Z  instance=604bcd55
+16:51:24Z  instance=604bcd55
+16:51:27Z  instance=604bcd55
+16:51:29Z  instance=604bcd55
+16:51:31Z  instance=604bcd55
+16:51:33Z  instance=604bcd55
+16:51:36Z  instance=604bcd55
+16:51:38Z  instance=604bcd55
+16:51:40Z  instance=604bcd55
+16:51:42Z  instance=604bcd55
+16:51:45Z  instance=604bcd55
+16:51:47Z  instance=604bcd55
+16:51:49Z  instance=604bcd55
+16:51:51Z  instance=604bcd55
+16:51:54Z  instance=604bcd55
+16:51:56Z  instance=604bcd55
+16:51:58Z  instance=604bcd55
+16:52:00Z  instance=604bcd55
+16:52:03Z  instance=604bcd55
+16:52:05Z  instance=604bcd55
+16:52:07Z  instance=604bcd55
+16:52:09Z  instance=604bcd55
+16:52:11Z  instance=604bcd55
+16:52:14Z  instance=604bcd55
+16:52:16Z  instance=604bcd55
+16:52:18Z  instance=604bcd55
+16:52:20Z  instance=604bcd55
+16:52:23Z  instance=604bcd55
+16:52:25Z  instance=604bcd55
+16:52:27Z  instance=604bcd55
+16:52:29Z  instance=604bcd55
+16:52:32Z  instance=604bcd55
+16:52:34Z  instance=604bcd55
+16:52:36Z  instance=604bcd55
+16:52:38Z  instance=604bcd55
+16:52:40Z  instance=604bcd55
+16:52:43Z  instance=604bcd55
+16:52:45Z  instance=604bcd55
+16:52:47Z  instance=604bcd55
+16:52:49Z  instance=604bcd55
+16:52:52Z  instance=604bcd55
+16:52:54Z  instance=604bcd55
+16:52:56Z  instance=604bcd55
+16:52:58Z  instance=604bcd55
+16:53:01Z  instance=604bcd55
+16:53:03Z  instance=604bcd55
+16:53:05Z  instance=604bcd55
+16:53:07Z  instance=604bcd55
+16:53:10Z  instance=604bcd55
+16:53:12Z  instance=604bcd55
+16:53:14Z  instance=604bcd55
+16:53:16Z  instance=604bcd55
+16:53:18Z  instance=604bcd55
+16:53:21Z  instance=604bcd55
+16:53:23Z  instance=604bcd55
+16:53:25Z  instance=604bcd55
+16:53:27Z  instance=604bcd55
+16:53:30Z  instance=604bcd55
+16:53:32Z  instance=604bcd55
+--- probe summary ---
+ERROR Response status code does not indicate success: 503 (Service Unavailable).  x2
+ERROR The request was canceled due to the configured HttpClient.Timeout of 10 seconds elapsing.  x1
+instance=15c23cca  x25
+instance=604bcd55  x62
+probe window: 16:49:55Z to 16:53:32Z
+16:50:43Z-16:50:44Z  portal: Update hosting plan P0v3 -> P1v3, Started -> Succeeded (activity log; control-plane only, worker move is asynchronous).
+16:54:11Z  after scale-up: sku=P1v3 workers=1 instance=604bcd55
+--- analysis (scale-up) ---
+Instance changed 15c23cca -> 604bcd55: scale-up moved the app to a new worker (confirmed).
+Failed requests: 16:50:51Z timeout (10 s), 16:51:03Z + ~16:51:05Z 503; first success on new worker 16:51:08Z. 3 of 90 probes failed.
+Observed outage ~16:50:49Z-16:51:08Z (~17-20 s, bounded by ~2 s probe interval), starting ~7 s after the control-plane 'Succeeded'.
+Hypothesis (untested): single instance (workers=1) meant no other worker could serve during the move; >=2 instances and Health check would be the production mitigations.
+--- availability probe during scale-down P1v3 -> P0v3 (every 2 s) ---
+ERROR Response status code does not indicate success: 503 (Service Unavailable).  x2
+ERROR The request was canceled due to the configured HttpClient.Timeout of 10 seconds elapsing.  x2
+instance=604bcd55  x11
+instance=6489fea0  x75
+probe window: 16:55:06Z to 16:58:49Z
+16:58:54Z  after scale-down: sku= workers=1 instance=6489fea0
+16:55:06Z  instance=604bcd55
+16:55:09Z  instance=604bcd55
+16:55:11Z  instance=604bcd55
+16:55:13Z  instance=604bcd55
+16:55:15Z  instance=604bcd55
+16:55:18Z  instance=604bcd55
+16:55:20Z  instance=604bcd55
+16:55:22Z  instance=604bcd55
+16:55:24Z  instance=604bcd55
+16:55:27Z  instance=604bcd55
+16:55:29Z  instance=604bcd55
+16:55:31Z  ERROR The request was canceled due to the configured HttpClient.Timeout of 10 seconds elapsing.
+16:55:43Z  ERROR Response status code does not indicate success: 503 (Service Unavailable).
+16:55:45Z  ERROR Response status code does not indicate success: 503 (Service Unavailable).
+16:55:48Z  ERROR The request was canceled due to the configured HttpClient.Timeout of 10 seconds elapsing.
+16:56:00Z  instance=6489fea0
+16:56:05Z  instance=6489fea0
+16:56:07Z  instance=6489fea0
+16:56:10Z  instance=6489fea0
+16:56:12Z  instance=6489fea0
+16:56:14Z  instance=6489fea0
+16:56:17Z  instance=6489fea0
+16:56:19Z  instance=6489fea0
+16:56:21Z  instance=6489fea0
+16:56:23Z  instance=6489fea0
+16:56:25Z  instance=6489fea0
+16:56:28Z  instance=6489fea0
+16:56:30Z  instance=6489fea0
+16:56:32Z  instance=6489fea0
+16:56:34Z  instance=6489fea0
+16:56:37Z  instance=6489fea0
+16:56:39Z  instance=6489fea0
+16:56:41Z  instance=6489fea0
+16:56:43Z  instance=6489fea0
+16:56:46Z  instance=6489fea0
+16:56:48Z  instance=6489fea0
+16:56:50Z  instance=6489fea0
+16:56:52Z  instance=6489fea0
+16:56:55Z  instance=6489fea0
+16:56:57Z  instance=6489fea0
+16:56:59Z  instance=6489fea0
+16:57:01Z  instance=6489fea0
+16:57:04Z  instance=6489fea0
+16:57:06Z  instance=6489fea0
+16:57:08Z  instance=6489fea0
+16:57:10Z  instance=6489fea0
+16:57:12Z  instance=6489fea0
+16:57:15Z  instance=6489fea0
+16:57:17Z  instance=6489fea0
+16:57:19Z  instance=6489fea0
+16:57:21Z  instance=6489fea0
+16:57:24Z  instance=6489fea0
+16:57:26Z  instance=6489fea0
+16:57:28Z  instance=6489fea0
+16:57:30Z  instance=6489fea0
+16:57:33Z  instance=6489fea0
+16:57:35Z  instance=6489fea0
+16:57:37Z  instance=6489fea0
+16:57:39Z  instance=6489fea0
+16:57:42Z  instance=6489fea0
+16:57:44Z  instance=6489fea0
+16:57:46Z  instance=6489fea0
+16:57:48Z  instance=6489fea0
+16:57:50Z  instance=6489fea0
+16:57:53Z  instance=6489fea0
+16:57:55Z  instance=6489fea0
+16:57:57Z  instance=6489fea0
+16:57:59Z  instance=6489fea0
+16:58:02Z  instance=6489fea0
+16:58:04Z  instance=6489fea0
+16:58:06Z  instance=6489fea0
+16:58:08Z  instance=6489fea0
+16:58:11Z  instance=6489fea0
+16:58:13Z  instance=6489fea0
+16:58:15Z  instance=6489fea0
+16:58:17Z  instance=6489fea0
+16:58:20Z  instance=6489fea0
+16:58:22Z  instance=6489fea0
+16:58:24Z  instance=6489fea0
+16:58:26Z  instance=6489fea0
+16:58:29Z  instance=6489fea0
+16:58:31Z  instance=6489fea0
+16:58:33Z  instance=6489fea0
+16:58:35Z  instance=6489fea0
+16:58:38Z  instance=6489fea0
+16:58:40Z  instance=6489fea0
+16:58:42Z  instance=6489fea0
+16:58:44Z  instance=6489fea0
+16:58:46Z  instance=6489fea0
+16:58:49Z  instance=6489fea0
+--- probe summary (scale-down) ---
+ERROR Response status code does not indicate success: 503 (Service Unavailable).  x2
+ERROR The request was canceled due to the configured HttpClient.Timeout of 10 seconds elapsing.  x2
+instance=604bcd55  x11
+instance=6489fea0  x75
+probe window: 16:55:06Z to 16:58:49Z
+16:59:54Z  after scale-down (recheck): sku=P0v3 workers=1 instance=6489fea0
+--- 'Update hosting plan' callers (activity log) ---
+16:16:37Z  Succeeded  caller=<autoscale-service-identity>
+16:28:36Z  Started  caller=<autoscale-service-identity>
+16:28:38Z  Succeeded  caller=<autoscale-service-identity>
+16:38:37Z  Succeeded  caller=<autoscale-service-identity>
+16:40:36Z  Started  caller=<autoscale-service-identity>
+16:40:37Z  Succeeded  caller=<autoscale-service-identity>
+16:50:37Z  Succeeded  caller=<autoscale-service-identity>
+16:50:43Z  Started  caller=<operator-email>
+16:50:44Z  Succeeded  caller=<operator-email>
+16:55:28Z  Started  caller=<operator-email>
+16:55:30Z  Succeeded  caller=<operator-email>
+--- analysis (scale-down) ---
+16:55:28Z-16:55:30Z  portal: Update hosting plan P1v3 -> P0v3, Started -> Succeeded (activity log).
+Instance changed 604bcd55 -> 6489fea0 (6489fea0 is the same ID seen as the 2nd instance during the earlier scale-out; observation only, not proof of worker reuse).
+Failed requests: 16:55:31Z timeout, 16:55:43Z 503, ~16:55:45Z 503, 16:55:48Z timeout; first success 16:56:00Z. 4 of 90 probes failed.
+Observed outage ~16:55:29Z-16:56:00Z (~30 s), starting ~1 s after the control-plane change (scale-up: ~17-20 s, starting ~7 s after).
+Both directions caused a brief outage on a single instance; the control-plane 'Succeeded' (1-2 s) does not indicate app availability.
+Caller <autoscale-service-identity> = service principal 'Azure Monitor System' (Microsoft first-party; autoscale is part of Azure Monitor) (az ad sp show); confirms autoscale performs scale actions by updating the plan under its own identity, separate from the operator.

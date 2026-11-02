@@ -1,0 +1,147 @@
+=== M1f: live config export (read-only) before Bicep codification, 2026-11-02 12:17Z ===
+--- plan ---
+{
+  "kind": "linux",
+  "location": "West US 3",
+  "reserved": null,
+  "sku": {
+    "capacity": 1,
+    "family": "Pv3",
+    "name": "P0v3",
+    "size": "P0v3",
+    "tier": "Premium0V3"
+  },
+  "zoneRedundant": null
+}
+
+--- production : site ---
+{
+  "clientAffinityEnabled": false,
+  "httpsOnly": true,
+  "publicNetworkAccess": "Enabled"
+}
+
+--- production : siteConfig ---
+{
+  "alwaysOn": true,
+  "ftpsState": "FtpsOnly",
+  "healthCheckPath": null,
+  "http20Enabled": false,
+  "ipDefault": "Allow",
+  "linuxFxVersion": "PHP|8.5",
+  "minTlsVersion": "1.2",
+  "scmIpDefault": "Allow",
+  "scmMinTlsVersion": "1.2",
+  "scmUseMain": false
+}
+
+--- production : lab app settings (LAB_* and WEBSITE_SWAP_*) ---
+LAB_SLOT = production  slotSetting=True
+WEBSITE_SWAP_WARMUP_PING_PATH = /health.php  slotSetting=False
+WEBSITE_SWAP_WARMUP_PING_STATUSES = 200  slotSetting=False
+--- production : all app setting NAMES (values not shown) ---
+LAB_SLOT, WEBSITE_SWAP_WARMUP_PING_PATH, WEBSITE_SWAP_WARMUP_PING_STATUSES
+--- staging : site ---
+{
+  "clientAffinityEnabled": false,
+  "httpsOnly": false,
+  "publicNetworkAccess": "Enabled"
+}
+
+--- staging : siteConfig ---
+{
+  "alwaysOn": false,
+  "ftpsState": "FtpsOnly",
+  "healthCheckPath": null,
+  "http20Enabled": false,
+  "ipDefault": null,
+  "linuxFxVersion": "PHP|8.5",
+  "minTlsVersion": "1.2",
+  "scmIpDefault": null,
+  "scmMinTlsVersion": "1.2",
+  "scmUseMain": false
+}
+
+--- staging : lab app settings (LAB_* and WEBSITE_SWAP_*) ---
+LAB_SLOT = staging  slotSetting=True
+WEBSITE_SWAP_WARMUP_PING_PATH = /health.php  slotSetting=False
+WEBSITE_SWAP_WARMUP_PING_STATUSES = 200  slotSetting=False
+--- staging : all app setting NAMES (values not shown) ---
+LAB_SLOT, WEBSITE_SWAP_WARMUP_PING_PATH, WEBSITE_SWAP_WARMUP_PING_STATUSES
+--- basic auth (publishing credentials) ---
+production scm allow=false
+production ftp allow=false
+--- autoscale setting ---
+{
+  "enabled": true,
+  "id": "/subscriptions/<sub>/resourceGroups/rg-compute-lab/providers/microsoft.insights/autoscalesettings/autoscale-asp-compute-lab",
+  "location": "West US 3",
+  "name": "autoscale-asp-compute-lab",
+  "notifications": [],
+  "predictiveAutoscalePolicy": {
+    "scaleMode": "Disabled"
+  },
+  "profiles": [
+    {
+      "capacity": {
+        "default": "1",
+        "maximum": "2",
+        "minimum": "1"
+      },
+      "name": "Auto created default scale condition",
+      "rules": [
+        {
+          "metricTrigger": {
+            "dimensions": [],
+            "dividePerInstance": false,
+            "metricName": "CpuPercentage",
+            "metricNamespace": "microsoft.web/serverfarms",
+            "metricResourceUri": "/subscriptions/<sub>/resourceGroups/rg-compute-lab/providers/Microsoft.Web/serverFarms/asp-compute-lab",
+            "operator": "GreaterThan",
+            "statistic": "Average",
+            "threshold": 50.0,
+            "timeAggregation": "Average",
+            "timeGrain": "PT1M",
+            "timeWindow": "PT5M"
+          },
+          "scaleAction": {
+            "cooldown": "PT5M",
+            "direction": "Increase",
+            "type": "ChangeCount",
+            "value": "1"
+          }
+        },
+        {
+          "metricTrigger": {
+            "dimensions": [],
+            "dividePerInstance": false,
+            "metricName": "CpuPercentage",
+            "metricNamespace": "microsoft.web/serverfarms",
+            "metricResourceUri": "/subscriptions/<sub>/resourceGroups/rg-compute-lab/providers/Microsoft.Web/serverFarms/asp-compute-lab",
+            "operator": "LessThan",
+            "statistic": "Average",
+            "threshold": 20.0,
+            "timeAggregation": "Average",
+            "timeGrain": "PT1M",
+            "timeWindow": "PT5M"
+          },
+          "scaleAction": {
+            "cooldown": "PT5M",
+            "direction": "Decrease",
+            "type": "ChangeCount",
+            "value": "1"
+          }
+        }
+      ]
+    }
+  ],
+  "resourceGroup": "rg-compute-lab",
+  "tags": {},
+  "targetResourceUri": "/subscriptions/<sub>/resourceGroups/rg-compute-lab/providers/Microsoft.Web/serverFarms/asp-compute-lab",
+  "type": "Microsoft.Insights/autoscaleSettings"
+}
+
+--- findings from export ---
+F1: staging slot httpsOnly=false (production=true). Slot config is separate from production; HTTPS-only was not carried to the slot. Staging accepts plain HTTP. To be fixed via Bicep (controlled change) after the NoChange proof.
+F2: staging alwaysOn=false (production=true). Staging can idle out between tests; acceptable for a lab slot, kept as-is.
+Note: plan 'reserved' and 'zoneRedundant' show null in the CLI projection; Linux plans are reserved=true. Verified by what-if below.

@@ -1,0 +1,12 @@
+=== M1e: access restrictions on production (portal); allow-only 203.0.113.10/32 (TEST-NET-3, documentation range) ===
+17:02:47Z  before  production: HTTP 200
+17:02:54Z  before  staging: HTTP 200
+17:08:41Z  after allow-only rule  production: HTTP 403
+17:08:41Z  after allow-only rule  staging: HTTP 200
+NOTE: no baseline probe was captured before the rule was saved; the pre-change state was 'Enabled with no access restrictions' (portal Networking page). The removal test below provides the open-state comparison.
+17:14:11Z  after removing restriction  production: HTTP 200
+17:14:12Z  after removing restriction  staging: HTTP 200
+CORRECTION: the NOTE above is wrong. The baseline WAS captured (17:02:47Z / 17:02:54Z 'before' lines, both HTTP 200, before the rule was saved). The note was added in error.
+--- burn.php removal (end of M1e) ---
+17:16:02Z  production: burn.php HTTP 404; app_version=v3 slot_setting=production
+17:16:02Z  staging: burn.php HTTP 404; app_version=v3 slot_setting=staging

@@ -1,0 +1,17 @@
+=== M1e: manual scale out to 2 instances (portal) ===
+{
+  "sku": "P0v3",
+  "workers": 2
+}
+--- 20 requests: which instance answered ---
+instance=6489fea0  x20
+--- diagnosis: all 20 requests hit one instance ---
+clientAffinityEnabled: false
+--- instances the platform reports ---
+State
+-------
+UNKNOWN
+UNKNOWN
+--- 20 requests, new connection each time (-DisableKeepAlive) ---
+instance=15c23cca  x9
+instance=6489fea0  x11

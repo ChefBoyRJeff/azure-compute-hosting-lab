@@ -1,0 +1,14 @@
+=== M1a troubleshooting case 1: App Service plan creation blocked by quota (2026-11-02) ===
+Symptom (portal, Create Web App, B1 Linux, East US):
+  Operation cannot be completed without additional quota.
+  Current Limit (B1 VMs): 0 | Current Usage: 0 | Amount required (B1 VMs): 1 | Minimum new limit: 1
+Note: M0 showed VM vCPU quota available (cores 0/10, BS family 0/10). App Service worker quota is a separate quota per SKU and region.
+Root cause: subscription App Service quota for B1 workers in East US = 0 (stated in the error).
+Remediation: request App Service quota increase (Quotas > App Service), B1 and S1.
+App Service quota check (portal, Quotas > App Service, East US, 2026-11-02): F1/B*/S*/P*v2/P*v3 = 0 of 0; Premium v4 (P0v4-P3v4, P*mv4) = 0 of 30.
+
+--- Attempt 2 (Premium v4 P0v4 Linux, approved 2026-11-02) ---
+Quotas page: P0v4 VMs '0 of 30'. Deployment validation (Microsoft.Web/sites preflight): 'Current Limit (P0v4 VMs): 0'.
+=> The portal quota view and the enforced limit disagree.
+Subscription policy: quotaId=, spendingLimit=
+Correction: the empty subscription-policy line above came from a script bug ($sub?api parsed as one variable). Re-run: quotaId=PayAsYouGo_2014-09-01, spendingLimit=Off

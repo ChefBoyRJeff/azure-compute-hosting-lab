@@ -1,0 +1,10 @@
+=== M1b: v1 deployed (zip deploy, Entra auth; basic auth disabled) + sticky app setting LAB_SLOT=production (portal) ===
+--- GET / ---
+app_version=v1
+slot_setting=production
+instance=6489fea0
+
+--- app setting (slotSetting = sticky) ---
+Name      Value       SlotSetting
+--------  ----------  -------------
+LAB_SLOT  production  True

@@ -1,6 +1,6 @@
 # Project 6 Plan: Azure Compute and App Hosting Lab
 
-**Status:** Plan approved 2026-11-01. M0 (scaffold, providers, budget, prices) done; nothing billable deployed yet.
+**Status:** Plan approved 2026-11-01. M0 done 2026-11-01. **M1 (App Service) done 2026-11-02** and torn down; see *M1 Outcomes and Deviations*. Next: M2 (containers). Nothing billable deployed.
 
 ## Business Problem
 
@@ -52,6 +52,35 @@ Each milestone: **portal first** (how the exam asks about it), then **codify in 
 - Cost policy "Block costly lab resources" blocks gateways, firewalls, Bastion, NAT, App Gateway, and similar; nothing P6 needs.
 - **Risk:** new pay-as-you-go subscriptions sometimes have 0 App Service quota for paid tiers. Checked first in M1.
 - No Docker or GitHub CLI locally: images are built in ACR or imported.
+
+## M1 Outcomes and Deviations (2026-11-02)
+
+**Deviations from the approved plan**
+- **Region and tier:** East US had **0 App Service quota** for every tier tried (B1, S1, F1, P0v4), so the plan was built as **P0v3 Linux in West US 3** ($0.0775/h; approved). Quota case in `m1-00`; support ticket opened.
+- **Slots and autoscale on P0v3 instead of S1:** Premium v3 includes both, so the separate S1 scale-up step was replaced by a short **P0v3 -> P1v3 -> P0v3** scale-up test ($0.15/h for about 5 minutes; approved).
+- **Load generator:** a temporary CPU-burn endpoint (`burn.php`) was deployed to the **staging slot only** (slots share the plan's instances, so it drives the plan's CPU metric), then removed.
+
+**Measured results**
+
+| Test | Result | Evidence |
+|---|---|---|
+| Slot swap and rollback | About 70 s per swap; sticky `LAB_SLOT` stayed with its slot | `m1-03` |
+| Broken build on staging | Swap **blocked** by the warm-up ping (`/health.php` must return 200) | `m1-04` |
+| Manual scale-out to 2 | Requests spread across 2 instances once keep-alive was disabled | `m1-05` |
+| Custom autoscale (CPU >50% / <20%, 5 min, min 1 / max 2) | Scale-out **5 min 40 s** after load started; scale-in about 7 min after it ended; performed by the **Azure Monitor System** identity | `m1-06`, `m1-07` |
+| Scale up P0v3 -> P1v3 -> P0v3 | App moved to a **new worker** each time; **about 17-20 s** (up) and **about 30 s** (down) of 503s and timeouts on a single instance | `m1-07` |
+| Access restrictions | Production **403** with allow-only rule; staging stayed 200 (rules are per slot); 200 after removal | `m1-08` |
+| Bicep codification | What-if: **0 real drift** after two fixes (missing tag; slot declared without `siteConfig`); remaining items documented as noise | `m1-09`, `m1-10` |
+| Finding F1 fixed through code | Staging accepted plain **HTTP**; fixed with `stagingHttpsOnly=true`; deploy caused **0 failed production requests** (75/75); staging now **301 -> https** | `m1-11` |
+| Teardown | Autoscale setting, app + slot, plan deleted; 0 resources left; budget kept | `m1-12` |
+
+**Lessons recorded**
+- Verify after **each** change: a combined swap + rollback runbook hid the intermediate state (`m1-03`).
+- A control-plane **"Succeeded" is not app availability**: the plan update finished in 1-2 s, the outage came after it (`m1-07`).
+- Slot configuration is **not inherited** from production (F1).
+- Keep evidence honest: wrong log lines were corrected, not deleted (`m1-06`, `m1-08`).
+
+**Rebuild M1:** `az deployment group create -g rg-compute-lab --template-file infra/main.bicep --parameters infra/main.bicepparam`, then deploy `app/` with `az webapp deploy` (production and staging). The app name must still be available.
 
 ## Out of Scope (conceptual only)
 

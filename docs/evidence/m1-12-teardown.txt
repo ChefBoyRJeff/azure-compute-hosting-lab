@@ -1,0 +1,16 @@
+=== M1 teardown (approved 2026-11-02): autoscale setting, web app + staging slot, App Service plan. Keep rg-compute-lab + budget. ===
+--- before: resources in rg-compute-lab ---
+  Microsoft.Web/serverFarms  asp-compute-lab
+  Microsoft.Web/sites  app-compute-lab-3026
+  Microsoft.Web/sites/slots  app-compute-lab-3026/staging
+  microsoft.insights/autoscalesettings  autoscale-asp-compute-lab
+apps on plan: app-compute-lab-3026
+--- delete ---
+17:34:39Z  autoscale delete exit=0
+17:35:11Z  webapp delete exit=0
+17:35:15Z  plan delete exit=0
+--- after: resources in rg-compute-lab ---
+remaining resource count: 0
+production hostname after delete: no response (DNS/connection failure)
+budget still present: budget-compute-hosting-lab
+Note: 'az webapp delete' warned that deleting the last app on a plan also deletes the plan; the plan was removed with the app at 17:35:11Z. The 17:35:15Z 'plan delete exit=0' ran against an already-deleted plan (idempotent delete).
