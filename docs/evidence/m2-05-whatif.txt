@@ -1,0 +1,74 @@
+bicep build exit=0
+=== M2: what-if, infra/m2.bicep vs. portal/CLI-built resources, 2026-11-02 15:28 ===
+WARNING: D:\Development\azure-compute-hosting-lab\infra\m2.bicep(40,5) : Warning BCP037: The property "anonymousPullEnabled" is not allowed on objects of type "RegistryProperties". Permissible properties include "encryption", "networkRuleSet", "policies". If this is a resource type definition inaccuracy, report it using https://aka.ms/bicep-type-issues. [https://aka.ms/bicep/core-diagnostics#BCP037]
+
+D:\Development\azure-compute-hosting-lab\infra\m2.bicep(150,13) : Warning BCP073: The property "ephemeralStorage" is read-only. Expressions cannot be assigned to read-only properties. If this is a resource type definition inaccuracy, report it using https://aka.ms/bicep-type-issues. [https://aka.ms/bicep/core-diagnostics#BCP073]
+
+
+Note: The result may contain false positive predictions (noise).
+You can help us improve the accuracy of the result by opening an issue here: https://aka.ms/WhatIfIssues
+NOTICE! - Want to get What-if without noise? Move to Deployment Stacks What-If https://aka.ms/stackswhatifGA
+
+Resource and property changes are indicated with these symbols:
+  - Delete
+  + Create
+  ~ Modify
+  = Nochange
+  x Noeffect
+
+The deployment will update the following scope:
+
+Scope: /subscriptions/<sub>/resourceGroups/rg-compute-lab
+
+  + Microsoft.ContainerRegistry/registries/acrcomputelab3026/providers/Microsoft.Authorization/roleAssignments/<guid> [2022-04-01]
+
+      apiVersion:                  "2022-04-01"
+      id:                          "/subscriptions/<sub>/resourceGroups/rg-compute-lab/providers/Microsoft.ContainerRegistry/registries/acrcomputelab3026/providers/Microsoft.Authorization/roleAssignments/<guid>"
+      name:                        "<guid>"
+      properties.principalId:      "[reference('/subscriptions/<sub>/resourceGroups/rg-compute-lab/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-compute-lab', '2023-01-31').principalId]"
+      properties.roleDefinitionId: "/subscriptions/<sub>/providers/Microsoft.Authorization/roleDefinitions/<guid>"
+      type:                        "Microsoft.Authorization/roleAssignments"
+
+  ~ Microsoft.App/containerApps/ca-compute-lab [2025-07-01]
+    - properties.configuration.ingress.clientCertificateMode:       "Ignore"
+    - properties.configuration.ingress.exposedPort:                 0
+    - properties.configuration.ingress.stickySessions:
+
+        affinity: "none"
+
+    ~ properties.configuration.registries: [
+      ~ 0:
+
+        ~ server: "acrcomputelab3026.azurecr.io" => "[reference('/subscriptions/<sub>/resourceGroups/rg-compute-lab/providers/Microsoft.ContainerRegistry/registries/acrcomputelab3026', '2023-07-01').loginServer]"
+
+      ]
+    ~ properties.template.containers: [
+      ~ 0:
+
+        ~ image: "acrcomputelab3026.azurecr.io/hello:v2" => "[format('{0}/hello:{1}', reference('/subscriptions/<sub>/resourceGroups/rg-compute-lab/providers/Microsoft.ContainerRegistry/registries/acrcomputelab3026', '2023-07-01').loginServer, 'v2')]"
+
+      ]
+    x properties.template.containers[0].resources.ephemeralStorage: "1Gi"
+
+  ~ Microsoft.ContainerRegistry/registries/acrcomputelab3026 [2023-07-01]
+    - properties.encryption:
+
+        status: "disabled"
+
+    - properties.policies.azureADAuthenticationAsArmPolicy:
+
+        status: "enabled"
+
+
+  = Microsoft.App/managedEnvironments/cae-compute-lab [2025-07-01]
+  = Microsoft.ManagedIdentity/userAssignedIdentities/id-compute-lab [2023-01-31]
+
+Resource changes: 1 to create, 2 to modify, 2 no change.
+
+--- what-if review ---
+NOTE: this what-if ran against the first draft of infra/m2.bicep (still contained anonymousPullEnabled and ephemeralStorage; see build warnings above). The committed file has both removed; the drafts differ only in those two properties.
++ roleAssignments: known difference (portal-created assignment has a random name; code uses deterministic guid()).
+App server/image '[reference(...)]': noise (what-if cannot resolve reference() to a resource in the same template; resolves to the same login server at deploy time).
+App '- clientCertificateMode/exposedPort/stickySessions': platform defaults (noise). 'x ephemeralStorage': read-only, no effect.
+Registry '- encryption / azureADAuthenticationAsArmPolicy': defaults (noise). Environment and identity: NoChange.
+Result: 0 real drift.

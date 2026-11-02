@@ -1,0 +1,241 @@
+=== M2c: Container Apps. Portal wizard kept proposing a new Log Analytics workspace even with 'Don't save logs' selected; environment created via CLI with --logs-destination none instead ===
+env create start 18:44:35Z, end 18:46:20Z, exit=0
+{
+  "logs": null,
+  "profiles": [
+    "Consumption"
+  ],
+  "publicNetworkAccess": "Enabled",
+  "state": "Succeeded",
+  "zoneRedundant": false
+}
+Log Analytics workspaces in rg-compute-lab: 0
+--- app created (portal, quickstart image, existing environment; review showed no new Log Analytics workspace) ---
+Log Analytics workspaces in rg-compute-lab: 0
+{
+  "identity": "None",
+  "image": "mcr.microsoft.com/k8se/quickstart:latest",
+  "latestRevision": "ca-compute-lab--7az5e8a",
+  "maxReplicas": 10,
+  "minReplicas": 0,
+  "revisionsMode": "Single",
+  "targetPort": 80
+}
+GET https://<ca-fqdn>/ -> HTTP 200 (quickstart page)
+--- step B: identity attached; image switched to hello:v1 via id-compute-lab while ingress targetPort still 80 (expected: new revision unhealthy, old keeps serving) ---
+{
+  "identity": "UserAssigned",
+  "latestReady": "ca-compute-lab--7az5e8a",
+  "latestRevision": "ca-compute-lab--0000001",
+  "registry": "acrcomputelab3026.azurecr.io",
+  "targetPort": 80
+}
+Name                     Active    Health    Running       Provisioning    Traffic    Image
+-----------------------  --------  --------  ------------  --------------  ---------  ----------------------------------------
+ca-compute-lab--7az5e8a  True      Healthy   ScaledToZero  Provisioned     0          mcr.microsoft.com/k8se/quickstart:latest
+ca-compute-lab--0000001  True      None      Activating    Provisioned     100        acrcomputelab3026.azurecr.io/hello:v1
+GET https://<ca-fqdn>/ -> HTTP 200; body: quickstart page (old revision)
+--- step B result ---
+New revision --0000001: configured traffic 100 but Activating; old --7az5e8a (traffic 0, latestReady) answered the request (quickstart page). Hypothesis: Single mode routes to latestReadyRevision until the new revision is healthy.
+--- system logs (platform events; streamed, not stored) ---
+{"TimeStamp": "2026-11-02T19:02:24Z", "Type": "Normal", "ContainerAppName": null, "RevisionName": null, "ReplicaName": null, "Msg": "Connecting to the events collector...", "Reason": "StartingGettingEvents", "EventSource": "ContainerAppController", "Count": 1}
+{"TimeStamp": "2026-11-02T19:02:25Z", "Type": "Normal", "ContainerAppName": null, "RevisionName": null, "ReplicaName": null, "Msg": "Successfully connected to events server", "Reason": "ConnectedToEventsServer", "EventSource": "ContainerAppController", "Count": 1}
+{"TimeStamp": "2026-11-02 19:02:11.8775958 +0000 UTC", "Type": "Warning", "ContainerAppName": "ca-compute-lab", "RevisionName": "ca-compute-lab--0000001", "ReplicaName": "ca-compute-lab--0000001-594f7cf58-glgwp", "Msg": "Probe of StartUp failed with status code: 1", "Reason": "ProbeFailed", "EventSource": "ContainerAppController", "Count": 160}
+{"TimeStamp": "2026-11-02 19:02:12.8734649 +0000 UTC", "Type": "Warning", "ContainerAppName": "ca-compute-lab", "RevisionName": "ca-compute-lab--0000001", "ReplicaName": "ca-compute-lab--0000001-594f7cf58-glgwp", "Msg": "Probe of StartUp failed with status code: 1", "Reason": "ProbeFailed", "EventSource": "ContainerAppController", "Count": 161}
+{"TimeStamp": "2026-11-02 19:02:13.8724895 +0000 UTC", "Type": "Warning", "ContainerAppName": "ca-compute-lab", "RevisionName": "ca-compute-lab--0000001", "ReplicaName": "ca-compute-lab--0000001-594f7cf58-glgwp", "Msg": "Probe of StartUp failed with status code: 1", "Reason": "ProbeFailed", "EventSource": "ContainerAppController", "Count": 162}
+{"TimeStamp": "2026-11-02 19:02:14.8750478 +0000 UTC", "Type": "Warning", "ContainerAppName": "ca-compute-lab", "RevisionName": "ca-compute-lab--0000001", "ReplicaName": "ca-compute-lab--0000001-594f7cf58-glgwp", "Msg": "Probe of StartUp failed with status code: 1", "Reason": "ProbeFailed", "EventSource": "ContainerAppController", "Count": 163}
+{"TimeStamp": "2026-11-02 19:02:15.8748975 +0000 UTC", "Type": "Warning", "ContainerAppName": "ca-compute-lab", "RevisionName": "ca-compute-lab--0000001", "ReplicaName": "ca-compute-lab--0000001-594f7cf58-glgwp", "Msg": "Probe of StartUp failed with status code: 1", "Reason": "ProbeFailed", "EventSource": "ContainerAppController", "Count": 164}
+{"TimeStamp": "2026-11-02 19:02:16.874946 +0000 UTC", "Type": "Warning", "ContainerAppName": "ca-compute-lab", "RevisionName": "ca-compute-lab--0000001", "ReplicaName": "ca-compute-lab--0000001-594f7cf58-glgwp", "Msg": "Probe of StartUp failed with status code: 1", "Reason": "ProbeFailed", "EventSource": "ContainerAppController", "Count": 165}
+{"TimeStamp": "2026-11-02 19:02:17.8734557 +0000 UTC", "Type": "Warning", "ContainerAppName": "ca-compute-lab", "RevisionName": "ca-compute-lab--0000001", "ReplicaName": "ca-compute-lab--0000001-594f7cf58-glgwp", "Msg": "Probe of StartUp failed with status code: 1", "Reason": "ProbeFailed", "EventSource": "ContainerAppController", "Count": 166}
+{"TimeStamp": "2026-11-02 19:02:18.872822 +0000 UTC", "Type": "Warning", "ContainerAppName": "ca-compute-lab", "RevisionName": "ca-compute-lab--0000001", "ReplicaName": "ca-compute-lab--0000001-594f7cf58-glgwp", "Msg": "Probe of StartUp failed with status code: 1", "Reason": "ProbeFailed", "EventSource": "ContainerAppController", "Count": 167}
+{"TimeStamp": "2026-11-02 19:02:19.8731633 +0000 UTC", "Type": "Warning", "ContainerAppName": "ca-compute-lab", "RevisionName": "ca-compute-lab--0000001", "ReplicaName": "ca-compute-lab--0000001-594f7cf58-glgwp", "Msg": "Probe of StartUp failed with status code: 1", "Reason": "ProbeFailed", "EventSource": "ContainerAppController", "Count": 168}
+{"TimeStamp": "2026-11-02 19:02:20.8738588 +0000 UTC", "Type": "Warning", "ContainerAppName": "ca-compute-lab", "RevisionName": "ca-compute-lab--0000001", "ReplicaName": "ca-compute-lab--0000001-594f7cf58-glgwp", "Msg": "Probe of StartUp failed with status code: 1", "Reason": "ProbeFailed", "EventSource": "ContainerAppController", "Count": 169}
+{"TimeStamp": "2026-11-02 19:02:21.8744825 +0000 UTC", "Type": "Warning", "ContainerAppName": "ca-compute-lab", "RevisionName": "ca-compute-lab--0000001", "ReplicaName": "ca-compute-lab--0000001-594f7cf58-glgwp", "Msg": "Probe of StartUp failed with status code: 1", "Reason": "ProbeFailed", "EventSource": "ContainerAppController", "Count": 170}
+{"TimeStamp": "2026-11-02 19:02:22.8718232 +0000 UTC", "Type": "Warning", "ContainerAppName": "ca-compute-lab", "RevisionName": "ca-compute-lab--0000001", "ReplicaName": "ca-compute-lab--0000001-594f7cf58-glgwp", "Msg": "Probe of StartUp failed with status code: 1", "Reason": "ProbeFailed", "EventSource": "ContainerAppController", "Count": 171}
+{"TimeStamp": "2026-11-02 19:02:23.872665 +0000 UTC", "Type": "Warning", "ContainerAppName": "ca-compute-lab", "RevisionName": "ca-compute-lab--0000001", "ReplicaName": "ca-compute-lab--0000001-594f7cf58-glgwp", "Msg": "Probe of StartUp failed with status code: 1", "Reason": "ProbeFailed", "EventSource": "ContainerAppController", "Count": 172}
+{"TimeStamp": "2026-11-02 19:02:24.8744126 +0000 UTC", "Type": "Warning", "ContainerAppName": "ca-compute-lab", "RevisionName": "ca-compute-lab--0000001", "ReplicaName": "ca-compute-lab--0000001-594f7cf58-glgwp", "Msg": "Probe of StartUp failed with status code: 1", "Reason": "ProbeFailed", "EventSource": "ContainerAppController", "Count": 173}
+
+--- app (console) logs from the new revision ---
+{"TimeStamp": "2026-11-02T19:02:31.61046", "Log": "Connecting to the container 'simple-hello-world-container'..."}
+{"TimeStamp": "2026-11-02T19:02:31.64254", "Log": "Successfully Connected to container: 'simple-hello-world-container' [Revision: 'ca-compute-lab--0000001', Replica: 'ca-compute-lab--0000001-594f7cf58-glgwp']"}
+{"TimeStamp": "2026-11-02T18:59:32.0716046+00:00", "Log": "F listening on :8080"}
+
+--- revisions after +2 min ---
+Name                     Health    Running           Traffic
+-----------------------  --------  ----------------  ---------
+ca-compute-lab--7az5e8a  Healthy   Running           0
+ca-compute-lab--0000001  None      ActivationFailed  100
+--- step C evidence summary ---
+App log: 'listening on :8080' (18:59:32Z). System log: 'Probe of StartUp failed with status code: 1' (ProbeFailed) x173+ about 1/s on replica --0000001-...; after ~2 more min the revision showed ActivationFailed.
+Old revision --7az5e8a (traffic 0) stayed Healthy and answered requests: no user-facing outage.
+Inferred (not shown in log text): default startup probe is TCP on the ingress target port (80). Test: change ONLY targetPort to 8080.
+--- step D: ingress targetPort 80 -> 8080 (portal) ---
+{
+  "latestReady": "ca-compute-lab--7az5e8a",
+  "latestRevision": "ca-compute-lab--0000001",
+  "targetPort": 8080
+}
+Name                     Active    Health    Running           Traffic
+-----------------------  --------  --------  ----------------  ---------
+ca-compute-lab--7az5e8a  True      Healthy   Running           0
+ca-compute-lab--0000001  True      None      ActivationFailed  100
+GET https://<ca-fqdn>/ ->
+[quickstart HTML page removed from evidence: Azure Container Apps "Hello World" default page]
+--- step D result ---
+targetPort=8080 applied, but --0000001 stayed ActivationFailed and latestReady stayed --7az5e8a: a failed revision does not re-activate on its own after an app-scope fix.
+Unexplained: quickstart (listens on 80) still answered after targetPort=8080 (hypothesis: change not yet applied to the running old revision's routing).
+--- step F: restart revision --0000001 (portal) ---
+{
+  "latestReady": "ca-compute-lab--7az5e8a",
+  "latestRevision": "ca-compute-lab--0000001",
+  "targetPort": 8080
+}
+Name                     Active    Health    Running           Traffic
+-----------------------  --------  --------  ----------------  ---------
+ca-compute-lab--7az5e8a  True      Healthy   Running           0
+ca-compute-lab--0000001  True      None      ActivationFailed  100
+GET https://<ca-fqdn>/ -> HTTP 200
+body: quickstart page (old revision)
+--- step F result: after restart (if performed) still ActivationFailed; quickstart still answering ---
+--- step H: diagnose. Hypothesis 2: explicit probes copied from the quickstart template (port 80) ---
+probes in the CURRENT app template (applies to new revisions):
+[
+  {
+    "failureThreshold": 3,
+    "initialDelaySeconds": 0,
+    "periodSeconds": 10,
+    "successThreshold": 1,
+    "tcpSocket": {
+      "port": 80
+    },
+    "timeoutSeconds": 5,
+    "type": "Liveness"
+  },
+  {
+    "failureThreshold": 48,
+    "initialDelaySeconds": 0,
+    "periodSeconds": 5,
+    "successThreshold": 1,
+    "tcpSocket": {
+      "port": 80
+    },
+    "timeoutSeconds": 5,
+    "type": "Readiness"
+  },
+  {
+    "failureThreshold": 240,
+    "initialDelaySeconds": 1,
+    "periodSeconds": 1,
+    "successThreshold": 1,
+    "tcpSocket": {
+      "port": 80
+    },
+    "timeoutSeconds": 3,
+    "type": "Startup"
+  }
+]
+probes in revision --0000001:
+[
+  {
+    "failureThreshold": 3,
+    "periodSeconds": 10,
+    "successThreshold": 1,
+    "tcpSocket": {
+      "port": 80
+    },
+    "timeoutSeconds": 5,
+    "type": "Liveness"
+  },
+  {
+    "failureThreshold": 48,
+    "periodSeconds": 5,
+    "successThreshold": 1,
+    "tcpSocket": {
+      "port": 80
+    },
+    "timeoutSeconds": 5,
+    "type": "Readiness"
+  },
+  {
+    "failureThreshold": 240,
+    "initialDelaySeconds": 1,
+    "periodSeconds": 1,
+    "successThreshold": 1,
+    "tcpSocket": {
+      "port": 80
+    },
+    "timeoutSeconds": 3,
+    "type": "Startup"
+  }
+]
+probes in revision --7az5e8a (quickstart):
+[]
+restart in activity log (last 30 min):
+  18:49:50Z  Microsoft.App/containerapps/write  Started
+  18:49:51Z  Microsoft.App/containerapps/write  Accepted
+  18:50:06Z  Microsoft.App/containerApps/write  Succeeded
+  18:51:43Z  Microsoft.App/containerApps/write  Started
+  18:51:44Z  Microsoft.App/containerApps/write  Accepted
+  18:51:59Z  Microsoft.App/containerApps/write  Succeeded
+  18:59:05Z  Microsoft.App/containerApps/write  Started
+  18:59:05Z  Microsoft.App/containerApps/write  Accepted
+  19:05:29Z  Microsoft.App/containerApps/write  Started
+  19:05:30Z  Microsoft.App/containerApps/write  Accepted
+  19:05:45Z  Microsoft.App/containerApps/write  Succeeded
+  19:10:45Z  Microsoft.App/containerApps/revisions/restart/action  Started
+  19:10:46Z  Microsoft.App/containerApps/revisions/restart/action  Succeeded
+latest system log lines:
+{"TimeStamp": "2026-11-02T19:16:20Z", "Type": "Normal", "ContainerAppName": null, "RevisionName": null, "ReplicaName": null, "Msg": "Connecting to the events collector...", "Reason": "StartingGettingEvents", "EventSource": "ContainerAppController", "Count": 1}
+{"TimeStamp": "2026-11-02T19:16:21Z", "Type": "Normal", "ContainerAppName": null, "RevisionName": null, "ReplicaName": null, "Msg": "Successfully connected to events server", "Reason": "ConnectedToEventsServer", "EventSource": "ContainerAppController", "Count": 1}
+
+--- step H result: ROOT CAUSE (confirmed from config) ---
+Quickstart revision --7az5e8a: probes [] (none). Revision --0000001 AND the current app template: explicit Liveness/Readiness/Startup probes, tcpSocket port 80.
+The portal 'Edit and deploy' step added explicit probes using the ingress port at that moment (80). Probes are part of the container template (revision-scope); ingress targetPort is application-scope, so changing it to 8080 did not change the probes.
+Restart at 19:10:45Z (activity log, Succeeded) re-ran the same template, so it could not fix it.
+CORRECTION: the earlier inference 'default probe is TCP on the ingress target port' was not the mechanism here; explicit port-80 probes were.
+Fix: new revision with probes on port 8080 (revision-scope change).
+--- step J: new revision with probes on 8080 (portal) ---
+{
+  "latestReady": "ca-compute-lab--0000002",
+  "latestRevision": "ca-compute-lab--0000002",
+  "probePorts": [
+    8080,
+    8080,
+    8080
+  ]
+}
+Name                     Active    Health    Running    Traffic
+-----------------------  --------  --------  ---------  ---------
+ca-compute-lab--0000002  True      Healthy   Running    100
+GET https://<ca-fqdn>/ -> HTTP 200
+app_version=v1
+revision=ca-compute-lab--0000002
+replica=ca-compute-lab--0000002-547f7db6f9-gf2vl
+
+--- result: FIXED. --0000002 Healthy/Running, traffic 100, probes 8080; old revisions deactivated (Single mode). Response app_version=v1 from revision --0000002. ---
+--- traffic split (CLI; portal main pane did not copy) ---
+activeRevisionsMode: Multiple
+update exit=0
+v1 revision: ca-compute-lab--0000002   v2 revision: ca-compute-lab--0000003
+v2 probe ports: 8080,8080,8080
+traffic right after creating v2 (before setting the split):
+LatestRevision    Weight
+----------------  --------
+True              100
+traffic set exit=0
+RevisionName             Weight
+-----------------------  --------
+ca-compute-lab--0000002  80
+ca-compute-lab--0000003  20
+Name                     Active    Health    Running       Traffic
+-----------------------  --------  --------  ------------  ---------
+ca-compute-lab--0000002  True      Healthy   ScaledToZero  80
+ca-compute-lab--0000003  True      Healthy   Running       20
+100 requests:
+  app_version=v1  x80
+  app_version=v2  x20
+--- traffic split results ---
+Measured 100 requests: v1 x80, v2 x20 (exact 80/20 in one run; not evidence of deterministic routing).
+FINDING: immediately after creating v2 (before the split was set) traffic showed 'LatestRevision=True, 100': the rule carried over from Single mode sent 100% to the new, untested revision as soon as it was ready (~60 s+ before the split).
+Practice: in Multiple mode, pin traffic to the current revision by name (e.g. --revision-weight <current>=100) BEFORE deploying, so the new revision starts at 0% and is promoted deliberately.
+Observed: --0000002 was ScaledToZero while holding 80% weight and woke on demand; no failed requests.

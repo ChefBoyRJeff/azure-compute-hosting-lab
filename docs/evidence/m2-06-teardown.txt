@@ -1,0 +1,18 @@
+=== M2 teardown (approved): AcrPull assignment, container app, environment, identity, registry. Keep rg-compute-lab + budget. ===
+--- before ---
+  Microsoft.ContainerRegistry/registries  acrcomputelab3026
+  Microsoft.ManagedIdentity/userAssignedIdentities  id-compute-lab
+  Microsoft.App/managedEnvironments  cae-compute-lab
+  Microsoft.App/containerApps  ca-compute-lab
+20:29:26Z  AcrPull role assignment delete exit=0
+20:29:43Z  container app delete exit=0
+20:50:00Z  environment delete exit=0
+20:50:05Z  identity delete exit=0
+20:50:18Z  registry delete exit=0
+--- after ---
+remaining resource count: 1
+  Microsoft.App/managedEnvironments  cae-compute-lab
+budget still present: budget-compute-hosting-lab
+--- recheck 20:52:05Z ---
+env show: ScheduledForDelete
+remaining resource count: 1

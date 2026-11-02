@@ -1,0 +1,126 @@
+=== M2a: preflight (read-only), 2026-11-02 13:06 ===
+rg-compute-lab location: eastus
+--- providers ---
+Microsoft.App : Registered
+Microsoft.ContainerRegistry : Registered
+Microsoft.ContainerInstance : Registered
+Microsoft.ManagedIdentity : Registered
+Microsoft.OperationalInsights : Registered
+--- region availability (eastus / westus3) ---
+Microsoft.App/managedEnvironments: eastus=True westus3=True
+Microsoft.ContainerInstance/containerGroups: eastus=True westus3=True
+Microsoft.ContainerRegistry/registries: eastus=True westus3=True
+--- Container Apps usage/quota (eastus) ---
+Name                             Usage    Limit
+-------------------------------  -------  -------
+ManagedEnvironmentCount          0        20
+SubscriptionDedicatedNCA100Gpus  0        0
+SessionPools                     0        20
+ExpressEnvironmentCount          0        450
+SandboxCores                     0        300
+--- ACI usage/quota (eastus) ---
+{
+  "value": [
+    {
+      "currentValue": 0,
+      "id": "/subscriptions/<sub>/providers/Microsoft.ContainerInstance/locations/eastus/usages/ContainerGroups",
+      "limit": 100,
+      "name": {
+        "localizedValue": "Container Groups",
+        "value": "ContainerGroups"
+      },
+      "unit": "Count"
+    },
+    {
+      "currentValue": 0,
+      "id": "/subscriptions/<sub>/providers/Microsoft.ContainerInstance/locations/eastus/usages/standardCores",
+      "limit": 10,
+      "name": {
+        "localizedValue": "Standard Cores",
+        "value": "StandardCores"
+      },
+      "unit": "Count"
+    },
+    {
+      "currentValue": 0,
+      "id": "/subscriptions/<sub>/providers/Microsoft.ContainerInstance/locations/eastus/usages/standardSpotCores",
+      "limit": 0,
+      "name": {
+        "localizedValue": "Standard Spot Cores",
+        "value": "StandardSpotCores"
+      },
+      "unit": "Count"
+    },
+    {
+      "currentValue": 0,
+      "id": "/subscriptions/<sub>/providers/Microsoft.ContainerInstance/locations/eastus/usages/standardK80Cores",
+      "limit": 18,
+      "name": {
+        "localizedValue": "Standard K80 Cores",
+        "value": "StandardK80Cores"
+      },
+      "unit": "Count"
+    },
+    {
+      "currentValue": 0,
+      "id": "/subscriptions/<sub>/providers/Microsoft.ContainerInstance/locations/eastus/usages/standardP100Cores",
+      "limit": 0,
+      "name": {
+        "localizedValue": "Standard P100 Cores",
+        "value": "StandardP100Cores"
+      },
+      "unit": "Count"
+    },
+    {
+      "currentValue": 0,
+      "id": "/subscriptions/<sub>/providers/Microsoft.ContainerInstance/locations/eastus/usages/standardV100Cores",
+      "limit": 0,
+      "name": {
+        "localizedValue": "Standard V100 Cores",
+        "value": "StandardV100Cores"
+      },
+      "unit": "Count"
+    },
+    {
+      "currentValue": 0,
+      "id": "/subscriptions/<sub>/providers/Microsoft.ContainerInstance/locations/eastus/usages/DedicatedContainerGroups",
+      "limit": 0,
+      "name": {
+        "localizedValue": "Dedicated Container Groups",
+        "value": "DedicatedContainerGroups"
+      },
+      "unit": "Count"
+    },
+    {
+      "currentValue": 0,
+      "id": "/subscriptions/<sub>/providers/Microsoft.ContainerInstance/locations/eastus/usages/dedicatedCores",
+      "limit": 3000,
+      "name": {
+        "localizedValue": "Dedicated Cores",
+        "value": "DedicatedCores"
+      },
+      "unit": "Count"
+    },
+    {
+      "currentValue": 0,
+      "id": "/subscriptions/<sub>/providers/Microsoft.ContainerInstance/locations/eastus/usages/ConfidentialContainerGroups",
+      "limit": 100,
+      "name": {
+        "localizedValue": "Dedicated Container Groups",
+        "value": "ConfidentialContainerGroups"
+      },
+      "unit": "Count"
+    },
+    {
+      "currentValue": 0,
+      "id": "/subscriptions/<sub>/providers/Microsoft.ContainerInstance/locations/eastus/usages/confidentialCores",
+      "limit": 10,
+      "name": {
+        "localizedValue": "Dedicated Cores",
+        "value": "ConfidentialCores"
+      },
+      "unit": "Count"
+    }
+  ]
+}
+

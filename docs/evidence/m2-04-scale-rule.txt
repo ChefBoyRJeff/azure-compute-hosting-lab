@@ -1,0 +1,56 @@
+=== M2c: HTTP scale rule (concurrency 5, min 0, max 3) with /slow endpoint; image hello:v2 ===
+promote ca-compute-lab--0000003 to 100%: exit=0
+
+Run ID: ca2 was successful after 20s
+
+build exit=0
+update exit=0
+traffic before promoting ca-compute-lab--0000004 (expect it at 0%):
+RevisionName             Weight
+-----------------------  --------
+ca-compute-lab--0000003  100
+promote ca-compute-lab--0000004 to 100%: exit=0
+{
+  "cooldownPeriod": 300,
+  "maxReplicas": 3,
+  "minReplicas": 0,
+  "pollingInterval": 30,
+  "rules": [
+    {
+      "http": {
+        "auth": [],
+        "metadata": {
+          "concurrentRequests": "5"
+        }
+      },
+      "name": "http-concurrency"
+    }
+  ]
+}
+19:32:47Z  load started (20 concurrent /slow?s=3 for 150 s)
+19:32:47Z  replicas=1  (load running)
+19:33:04Z  replicas=3  (load running)
+19:33:21Z  replicas=3  (load running)
+19:33:38Z  replicas=3  (load running)
+19:33:55Z  replicas=3  (load running)
+19:34:12Z  replicas=3  (load running)
+19:34:29Z  replicas=3  (load running)
+19:34:46Z  replicas=3  (load running)
+19:35:03Z  replicas=3  (load running)
+19:35:20Z  replicas=3  (load running)
+19:35:37Z  replicas=3  (load running)
+19:35:54Z  replicas=3  (load running)
+load job: Completed
+19:37:51Z  replicas=3  (idle)
+19:38:54Z  replicas=3  (idle)
+19:39:56Z  replicas=3  (idle)
+19:40:59Z  replicas=1  (idle)
+19:42:01Z  replicas=0  (idle)
+19:43:03Z  replicas=0  (idle)
+19:44:05Z  replicas=0  (idle)
+19:45:07Z  replicas=0  (idle)
+--- analysis ---
+Scale-out 1->3 between 19:32:47Z and 19:33:04Z (<=17 s): 20 in-flight / 5 per replica wants 4, capped by maxReplicas 3.
+Load ended ~19:35:17Z. Scale-in: 3 at 19:39:56Z, 1 at 19:40:59Z, 0 at 19:42:01Z (~5-6 min after load end): consistent with cooldownPeriod 300 s; pollingInterval 30 s.
+New revision --0000004 started at 0% traffic (traffic pinned by name) and was promoted deliberately: pinning lesson applied.
+Comparison: App Service CPU autoscale (M1) scaled out after 5 min 40 s (5-min average window); HTTP concurrency here < 20 s.

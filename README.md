@@ -4,7 +4,7 @@ Hands-on lab covering the main ways Azure runs workloads, and when to choose eac
 
 Built as a hands-on project while studying for **AZ-104: Microsoft Azure Administrator**. This is lab work in a personal subscription, not a production environment.
 
-> **Status (2026-11-02):** M0 and **M1 (App Service) complete** and torn down. M2 (containers) is next. Nothing is deployed or billing. Plan and measured results: [`docs/plan.md`](docs/plan.md).
+> **Status (2026-11-02):** M0, **M1 (App Service)** and **M2 (containers)** complete and torn down. M3 (VM Scale Set) is next. Nothing is billing. Plan and measured results: [`docs/plan.md`](docs/plan.md).
 
 ## M1: App Service (done)
 
@@ -46,12 +46,35 @@ az webapp deploy -g rg-compute-lab -n <app-name> --slot staging --src-path $env:
 
 The plan bills about $0.08/hour whether or not the app is used. Delete it after testing: delete the autoscale setting, then the web app (its slot goes with it), then the plan.
 
+## M2: Containers (done)
+
+Codified in [`infra/m2.bicep`](infra/m2.bicep); app source in [`container/`](container/):
+
+- **Azure Container Registry** Basic, admin user off; image built in the cloud with `az acr build` (no local Docker)
+- **Azure Container Instances** pulling the private image with a **user-assigned managed identity**: first **denied** (no role), diagnosed as **authorization**, fixed with **AcrPull on the registry only**
+- **Azure Container Apps** (Consumption, no log storage): private image via the same identity, ingress on 8080, **revisions and an 80/20 traffic split** (measured 80/20), **HTTP concurrency scale rule** (1 → 3 replicas in under 20 s, back to 0 after about 5 minutes)
+- **Incident:** a new revision failed activation because portal-written health probes still targeted port 80; the old revision kept serving. Root cause found by comparing probe configuration across revisions; fixed with a new revision.
+
+| Evidence | Contents |
+|---|---|
+| `m2-00-preflight.txt` | Providers, region availability, Container Apps and ACI quota |
+| `m2-01-acr.txt` | Registry settings, cloud build, image digest |
+| `m2-02-identity-and-aci-pull.txt` | Denied pull, diagnosis, AcrPull fix, running container |
+| `m2-03-container-apps.txt` | Environment, app, probe incident, traffic split |
+| `m2-04-scale-rule.txt` | HTTP scale rule: scale out and scale to zero |
+| `m2-05-whatif.txt` | What-if of `infra/m2.bicep` against the built resources, with review |
+| `m2-06-teardown.txt` | Deletion and verification |
+
+**Rebuild (fresh):** set `pinnedRevisionName = ''` in `infra/m2.bicepparam`, deploy the registry, identity and role assignment, run `az acr build -r <acr> -t hello:v2 container`, then deploy the full template. (A single deploy fails on a fresh build because the app's first revision would try to pull an image that doesn't exist yet.)
+
 ## Repository Layout
 
 | Path | Purpose |
 |---|---|
 | `infra/main.bicep`, `infra/main.bicepparam` | M1 App Service build (plan, app, slot, settings, basic auth policy, autoscale) |
 | `infra/budget.bicep`, `infra/budget.example.bicepparam` | $5 budget on the resource group (real alert email kept in a gitignored local file) |
+| `infra/m2.bicep`, `infra/m2.bicepparam` | M2 containers (registry, identity + AcrPull, environment, container app) |
+| `container/` | Container app source (`app.py`, `Dockerfile`): reports version, revision and replica; `/health`, `/slow` |
 | `app/` | Test app: `index.php` reports version, slot setting and instance; `health.php` is the swap health check |
 | `docs/plan.md` | Plan, costs, outcomes and deviations |
 | `docs/evidence/` | Sanitized command output for every milestone |

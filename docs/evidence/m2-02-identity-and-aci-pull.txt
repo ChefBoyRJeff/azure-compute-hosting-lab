@@ -1,0 +1,51 @@
+=== M2d: user-assigned identity (portal) + ACI pull test ===
+identity: id-compute-lab (principalId <guid>, created in portal)
+role assignments for the identity (any scope): 0
+--- attempt 1: ACI with id-compute-lab, NO AcrPull (expected: pull denied) ---
+start 18:16:20Z, end 18:16:23Z, exit=1
+ERROR: (InaccessibleImage) The image 'acrcomputelab3026.azurecr.io/hello:v1' in container group 'aci-compute-lab' is not accessible. Please check the image and registry credential.
+Code: InaccessibleImage
+Message: The image 'acrcomputelab3026.azurecr.io/hello:v1' in container group 'aci-compute-lab' is not accessible. Please check the image and registry credential.
+
+--- does a container group exist after the attempt? ---
+ERROR: (ResourceNotFound) The Resource 'Microsoft.ContainerInstance/containerGroups/aci-compute-lab' under resource group 'rg-compute-lab' was not found. For more details please go to https://aka.ms/ARMResourceNotFoundFix
+Code: ResourceNotFound
+Message: The Resource 'Microsoft.ContainerInstance/containerGroups/aci-compute-lab' under resource group 'rg-compute-lab' was not found. For more details please go to https://aka.ms/ARMResourceNotFoundFix
+
+--- diagnosis (read-only) ---
+1. image and tag exist in the registry:
+   hello:v1
+2. registry reachable (public, no network rules):
+   publicNetworkAccess=Enabled sku=Basic
+3. identity exists in Entra ID as a service principal (it CAN authenticate):
+   servicePrincipalType=ManagedIdentity enabled=true
+4. role assignments on the registry scope (who is AUTHORIZED to pull):
+   User Access Administrator  ->  <other principal> (User)
+   Owner  ->  <other principal> (User)
+   id-compute-lab assignments at registry scope: 0
+--- fix: AcrPull granted to id-compute-lab at registry scope (portal, approved 2026-11-02) ---
+   AcrPull at scope .../registries/acrcomputelab3026
+fix recorded at 18:20:26Z
+--- attempt 2+: same command, only change = AcrPull ---
+18:25:13Z  try 1: exit=0 ok  (+288 s after fix)
+--- verify ---
+{
+  "cpu": 0.5,
+  "identityType": "UserAssigned",
+  "memGb": null,
+  "restartCount": 0,
+  "state": "Running"
+}
+GET http://<aci-ip>:8080/ ->
+app_version=v1
+revision=n/a
+replica=SandboxHost-639292407178714281
+
+--- conclusion ---
+Root cause (confirmed by single-variable fix): AUTHORIZATION. id-compute-lab could authenticate (enabled ManagedIdentity service principal) but had no role on the registry; ACR refused the pull and ACI surfaced the generic 'InaccessibleImage ... check the image and registry credential'.
+Fix: AcrPull for id-compute-lab at registry scope only (narrowest built-in pull role; repository scope would require ABAC mode).
+Propagation: try 1 ran 288 s after the fix and succeeded, so RBAC took effect within <=288 s (not measured more precisely; the first retry started late).
+Note: 'memGb: null' above is a query casing error (property is memoryInGB); the container was created with --memory 1.
+Exam points: ACI image pulls with a managed identity require a USER-assigned identity (system-assigned not supported) and can only be configured via CLI/ARM/Bicep, not the portal. Failed validation created no container group (no billing).
+18:28:29Z  ACI delete exit=0
+container groups left: 0

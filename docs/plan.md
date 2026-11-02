@@ -1,6 +1,6 @@
 # Project 6 Plan: Azure Compute and App Hosting Lab
 
-**Status:** Plan approved 2026-11-01. M0 done 2026-11-01. **M1 (App Service) done 2026-11-02** and torn down; see *M1 Outcomes and Deviations*. Next: M2 (containers). Nothing billable deployed.
+**Status:** Plan approved 2026-11-01. M0 done 2026-11-01. **M1 (App Service) and M2 (containers) done 2026-11-02**, both torn down; see the Outcomes and Deviations sections. Next: M3 (VM Scale Set).
 
 ## Business Problem
 
@@ -81,6 +81,34 @@ Each milestone: **portal first** (how the exam asks about it), then **codify in 
 - Keep evidence honest: wrong log lines were corrected, not deleted (`m1-06`, `m1-08`).
 
 **Rebuild M1:** `az deployment group create -g rg-compute-lab --template-file infra/main.bicep --parameters infra/main.bicepparam`, then deploy `app/` with `az webapp deploy` (production and staging). The app name must still be available.
+
+## M2 Outcomes and Deviations (2026-11-02)
+
+**Deviations from the approved plan**
+- **Order:** ACI (the planned AcrPull failure) ran **before** Container Apps, so one user-assigned identity and **one** role assignment served both.
+- **ACI managed-identity pulls** need a **user-assigned** identity and can only be configured with CLI/ARM/Bicep (not the portal), so that step used the CLI.
+- **Environment created with the CLI** (`--logs-destination none`): the portal wizard kept proposing a new Log Analytics workspace even with "Don't save logs" selected.
+- **App created from the quickstart image first**, then switched to the private image, because the portal's ACR option would have created a new identity and a second AcrPull assignment.
+- Added a `/slow` endpoint to the app so the HTTP concurrency scale rule could be tested.
+
+**Measured results**
+
+| Test | Result | Evidence |
+|---|---|---|
+| Cloud build (ACR Tasks) | `hello:v1` built and pushed in 21 s; base image pinned by digest | `m2-01` |
+| ACI pull without a role | `InaccessibleImage` in 3 s; no container group created | `m2-02` |
+| Diagnosis | Image, network and authentication ruled out; identity had **0 roles** on the registry → **authorization** | `m2-02` |
+| Fix | **AcrPull at registry scope only**; same command then succeeded (RBAC took effect within <= 288 s) | `m2-02` |
+| Container Apps port/probe incident | New revision **ActivationFailed** (startup probe failed 170+ times); old revision kept serving (**no outage**). Root cause: portal-written **TCP probes on port 80** (revision scope); fixing ingress (app scope) and restarting did not help; new revision with probes on 8080 fixed it | `m2-03` |
+| Traffic split | Multiple mode, 80/20 → measured **80/20** in 100 requests. Finding: the carried-over "latest revision" rule sent **100% to the new revision** before the split was set; pin traffic by name before deploying | `m2-03` |
+| HTTP scale rule (concurrency 5, max 3) | **1 → 3 replicas in <= 17 s** under load; **3 → 0** about 5-6 min after load (cooldown 300 s) | `m2-04` |
+| Bicep codification | What-if: **0 real drift**; role assignment shows as Create (portal random name vs. deterministic `guid()`) | `m2-05` |
+| Teardown | Role assignment, app, identity, registry deleted; environment delete took ~20 min and then showed `ScheduledForDelete` | `m2-06` |
+
+**Lessons recorded**
+- Generic errors (`InaccessibleImage`) need elimination with evidence; change one variable to confirm.
+- Know which settings are **revision scope** (containers, probes, env vars, scale) and which are **application scope** (ingress, registries, secrets).
+- In Multiple revision mode, a new revision can take traffic immediately unless traffic is pinned by revision name.
 
 ## Out of Scope (conceptual only)
 

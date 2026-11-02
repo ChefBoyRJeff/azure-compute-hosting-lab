@@ -1,0 +1,44 @@
+=== M2b: ACR Basic (portal), approved 2026-11-02, $0.1666/day ===
+{
+  "adminUserEnabled": false,
+  "anonymousPull": false,
+  "created": "2026-11-02T18:10:30.152005+00:00",
+  "location": "eastus",
+  "loginServer": "acrcomputelab3026.azurecr.io",
+  "name": "acrcomputelab3026",
+  "publicNetworkAccess": "Enabled",
+  "sku": "Basic"
+}
+roleAssignmentMode: LegacyRegistryPermissions
+--- az acr build (ACR Tasks, cloud build) ---
+build start 18:12:19Z, end 18:12:44Z, exit=0
+
+2bfa5e762b7a: Pushed
+v1: digest: sha256:c6018a07ae45e0628a66a089275242a010bcbd2800e7bbebae39d7c4274793c2 size: 1360
+2026/11/02 18:12:41 Successfully pushed image: acrcomputelab3026.azurecr.io/hello:v1
+2026/11/02 18:12:41 Step ID: build marked as successful (elapsed time in seconds: 9.940801)
+2026/11/02 18:12:41 Populating digests for step ID: build...
+2026/11/02 18:12:42 Successfully populated digests for step ID: build
+2026/11/02 18:12:42 Step ID: push marked as successful (elapsed time in seconds: 6.645859)
+2026/11/02 18:12:42 The following dependencies were found:
+2026/11/02 18:12:42 
+- image:
+    registry: acrcomputelab3026.azurecr.io
+    repository: hello
+    tag: v1
+    digest: sha256:c6018a07ae45e0628a66a089275242a010bcbd2800e7bbebae39d7c4274793c2
+  runtime-dependency:
+    registry: mcr.microsoft.com
+    repository: azurelinux/base/python
+    tag: "3.12"
+    digest: sha256:71a1f5a1821f4c56e45aff52e792ed6c0500631e201cfc140c4c9d22886b29f9
+  git: {}
+
+
+Run ID: ca1 was successful after 21s
+
+--- repository and tags ---
+hello
+Tag    Digest                                                                   Created
+-----  -----------------------------------------------------------------------  ----------------------------
+v1     sha256:c6018a07ae45e0628a66a089275242a010bcbd2800e7bbebae39d7c4274793c2  2026-11-02T18:12:41.6432997Z
