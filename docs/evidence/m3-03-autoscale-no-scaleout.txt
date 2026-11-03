@@ -1,0 +1,188 @@
+=== M3c: CONTROLLED FAILURE. Autoscale out CPU>70% avg (+1), in CPU<25% (-1), min 2 / max 3. Load on ONE instance only (vmss-compute-lab_3d77e75c). ===
+{
+  "enabled": true,
+  "max": "3",
+  "min": "2",
+  "rules": [
+    {
+      "agg": "Average",
+      "cooldown": "PT5M",
+      "dir": "Increase",
+      "metric": "Percentage CPU",
+      "op": "GreaterThan",
+      "threshold": 60.0,
+      "window": "PT5M"
+    },
+    {
+      "agg": "Average",
+      "cooldown": "PT5M",
+      "dir": "Decrease",
+      "metric": "Percentage CPU",
+      "op": "LessThan",
+      "threshold": 25.0,
+      "window": "PT5M"
+    }
+  ]
+}
+13:58:04Z  CPU load started on vmss-compute-lab_3d77e75c only (busy loop, 900 s)
+13:59:16Z  instances=2  cpu_vm1=  cpu_vm3=0.49  avg=n/a  credits_vm1=
+14:00:22Z  instances=2  cpu_vm1=  cpu_vm3=  avg=n/a  credits_vm1=
+14:01:27Z  instances=2  cpu_vm1=90.885  cpu_vm3=0.475  avg=45.7  credits_vm1=29.89
+14:02:32Z  instances=2  cpu_vm1=99.09  cpu_vm3=0.47  avg=49.8  credits_vm1=
+14:03:40Z  instances=2  cpu_vm1=  cpu_vm3=0.49  avg=n/a  credits_vm1=
+14:04:45Z  instances=2  cpu_vm1=99.77  cpu_vm3=0.54  avg=50.2  credits_vm1=27.665
+14:05:50Z  instances=2  cpu_vm1=  cpu_vm3=0.47  avg=n/a  credits_vm1=26.32
+14:06:56Z  instances=2  cpu_vm1=99.77  cpu_vm3=0.46  avg=50.1  credits_vm1=25.43
+14:08:01Z  instances=2  cpu_vm1=99.77  cpu_vm3=0.46  avg=50.1  credits_vm1=24.54
+14:09:07Z  instances=2  cpu_vm1=99.51  cpu_vm3=0.465  avg=50  credits_vm1=22.75
+14:10:13Z  instances=2  cpu_vm1=  cpu_vm3=0.47  avg=n/a  credits_vm1=
+14:11:19Z  instances=3  cpu_vm1=99.75  cpu_vm3=  avg=n/a  credits_vm1=20.97
+14:12:24Z  instances=3  cpu_vm1=99.76  cpu_vm3=0.47  avg=50.1  credits_vm1=20.08
+14:13:29Z  instances=3  cpu_vm1=  cpu_vm3=0.48  avg=n/a  credits_vm1=
+14:14:35Z  instances=3  cpu_vm1=99.765  cpu_vm3=  avg=n/a  credits_vm1=18.29
+CORRECTION: the header above says 70; autoscale show (directly below it) confirms the saved threshold is 60. The test ran with 60.
+RESULT: scale-out 2 -> 3 between 14:10:13Z and 14:11:19Z, although per-VM samples averaged ~50% (< 60). Expected failure did NOT occur; investigating.
+--- VMSS-level 'Percentage CPU' per minute (the metric autoscale evaluates) ---
+13:58Z  avg=0.5125  max=0.59    samples=4
+13:59Z  avg=45.68   max=99.77   samples=4
+14:00Z  avg=49.78   max=99.79   samples=4
+14:01Z  avg=0.49    max=0.55    samples=2
+14:02Z  avg=66.69   max=99.79   samples=6
+14:03Z  avg=50.125  max=99.78   samples=4
+14:04Z  avg=50.115  max=99.79   samples=4
+14:05Z  avg=50.115  max=99.78   samples=4
+14:06Z  avg=50.125  max=99.78   samples=4
+14:07Z  avg=49.9875 max=99.76   samples=4
+14:08Z  avg=50.12   max=99.78   samples=4
+14:09Z  avg=50.105  max=99.79   samples=4
+14:10Z  avg=50.115  max=99.77   samples=4
+14:11Z  avg=50.1325 max=99.79   samples=4
+14:12Z  avg=50.1175 max=99.78   samples=4
+14:13Z  avg=47.465  max=99.82   samples=6
+14:14Z  avg=3.358333333333333 max=17.35   samples=6
+14:15Z  avg=0.5275  max=0.69    samples=4
+14:16Z  avg=        max=        samples=1
+14:17Z  avg=        max=        samples=1
+14:18Z  avg=        max=        samples=1
+14:19Z  avg=        max=        samples=1
+--- autoscale events (activity log) ---
+13:57:14Z  Update autoscale setting  Succeeded  old= new=
+14:07:09Z  Update autoscale setting  Succeeded  old= new=
+14:11:13Z  Autoscale scale up initiated  Succeeded  old=2 new=3
+14:11:13Z  Autoscale scale up initiated  Succeeded  old=2 new=3
+14:11:13Z  Autoscale scale up completed  Succeeded  old=2 new=3
+--- instances now ---
+vmss-compute-lab_05dc256b  zone=1  power=VM running
+vmss-compute-lab_3d77e75c  zone=1  power=VM running
+vmss-compute-lab_5045d786  zone=3  power=VM running
+--- current autoscale rules (after the 14:07:09Z update) ---
+{
+  "max": "3",
+  "min": "2",
+  "rules": [
+    {
+      "dir": "Increase",
+      "grainStat": "Average",
+      "op": "GreaterThan",
+      "threshold": 60.0,
+      "timeAgg": "Average",
+      "window": "PT5M"
+    },
+    {
+      "dir": "Decrease",
+      "grainStat": "Average",
+      "op": "LessThan",
+      "threshold": 25.0,
+      "timeAgg": "Average",
+      "window": "PT5M"
+    }
+  ]
+}
+--- who changed the autoscale setting ---
+13:57:08Z  Started  caller=<operator-email>
+13:57:14Z  Succeeded  caller=<operator-email>
+14:07:09Z  Succeeded  caller=<operator-email>
+--- instances now ---
+capacity: 3
+--- full scale-out rule (metric source, dimensions, divide-per-instance) ---
+metricResourceUri: .../virtualMachineScaleSets/vmss-compute-lab
+metricNamespace:   microsoft.compute/virtualmachinescalesets
+dimensions:        none
+dividePerInstance: False
+timeGrain:         PT1M
+capacity now: 2
+--- investigation so far ---
+Rule (full): metric source = the scale set (virtualMachineScaleSets/vmss-compute-lab), namespace microsoft.compute/virtualmachinescalesets, no dimensions, dividePerInstance=False, timeGrain PT1M, threshold 60 Average/Average, window PT5M (unchanged after the 14:07:09Z operator save).
+VMSS-level metric 14:03-14:12Z: avg 50.0-50.1 with 4 samples/min (no gaps) -> no 5-min window > 60 from 14:03 on.
+Hypotheses ruled out: (1) metric gaps; (3) threshold/aggregation/source/dimension changed at 14:07.
+Status: UNEXPLAINED. The value autoscale evaluated is not visible without autoscale diagnostic logs (not enabled during the run).
+Scale-in: capacity back to 2 by ~14:18Z.
+Next: enable autoscale diagnostic logs (AutoscaleEvaluations + AutoscaleScaleActions) and repeat the identical test.
+--- autoscale's own metrics (autoscale setting resource; platform metrics, retained 93 days) ---
+[ObservedMetricValue]
+  13:58Z  avg=0        max=0
+  13:59Z  avg=0        max=0
+  14:00Z  avg=0        max=0
+  14:01Z  avg=0        max=0
+  14:02Z  avg=4        max=8
+  14:03Z  avg=12.5     max=16
+  14:04Z  avg=16       max=16
+  14:05Z  avg=22       max=31
+  14:06Z  avg=39       max=39
+  14:07Z  avg=23       max=27
+  14:08Z  avg=37.67    max=44
+  14:09Z  avg=44       max=44
+  14:10Z  avg=51       max=52
+  14:11Z  avg=43.67    max=50
+  14:12Z  avg=60       max=60
+  14:17Z  avg=33       max=33
+  14:18Z  avg=30       max=30
+  14:19Z  avg=22.5     max=25
+[MetricThreshold]
+  13:58Z  avg=60       max=60
+  13:59Z  avg=60       max=60
+  14:00Z  avg=60       max=60
+  14:01Z  avg=60       max=60
+  14:02Z  avg=60       max=60
+  14:03Z  avg=60       max=60
+  14:04Z  avg=60       max=60
+  14:05Z  avg=60       max=60
+  14:06Z  avg=60       max=60
+  14:07Z  avg=60       max=60
+  14:08Z  avg=60       max=60
+  14:09Z  avg=60       max=60
+  14:10Z  avg=60       max=60
+  14:11Z  avg=60       max=60
+  14:12Z  avg=60       max=60
+  14:17Z  avg=25       max=25
+  14:18Z  avg=25       max=25
+  14:19Z  avg=25       max=25
+[ObservedCapacity]
+  13:58Z  avg=2        max=2
+  13:59Z  avg=2        max=2
+  14:00Z  avg=2        max=2
+  14:01Z  avg=2        max=2
+  14:02Z  avg=2        max=2
+  14:03Z  avg=2        max=2
+  14:04Z  avg=2        max=2
+  14:05Z  avg=2        max=2
+  14:06Z  avg=2        max=2
+  14:07Z  avg=2        max=2
+  14:08Z  avg=2        max=2
+  14:09Z  avg=2        max=2
+  14:10Z  avg=2        max=2
+  14:11Z  avg=2        max=2
+  14:12Z  avg=2.57     max=3
+  14:13Z  avg=3        max=3
+  14:14Z  avg=3        max=3
+  14:15Z  avg=3        max=3
+  14:16Z  avg=3        max=3
+  14:17Z  avg=3        max=3
+  14:18Z  avg=3        max=3
+  14:19Z  avg=2.43     max=3
+  14:20Z  avg=2        max=2
+--- autoscale ObservedMetricValue findings (retroactive platform metrics) ---
+Autoscale's observed value lagged the raw metric (0 at 13:59-14:01 while raw ~46-50) and climbed to 60 at 14:12Z while the raw VMSS average stayed ~50.1.
+Scale-out 2->3 coincided with ObservedMetricValue reaching 60 (threshold 60, GreaterThan; values reported as integers). Scale-in coincided with 22.5 < 25.
+CONFIRMED: autoscale acts on its own computed value, which differs from the Metrics API chart. NOT YET EXPLAINED: why ~60 vs ~50.
+Next: identical repeat with AutoscaleEvaluations/AutoscaleScaleActions logs -> law-monitoring-lab.

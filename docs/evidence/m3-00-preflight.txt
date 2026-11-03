@@ -1,0 +1,22 @@
+=== M3: preflight (read-only), 2026-11-03 08:24 ===
+--- repo state ---
+c383257 M2: containers - ACR cloud build, ACI identity pull (AcrPull fix), Container Apps probe incident, traffic split, HTTP scale rule, Bicep + what-if, teardown
+692983e README: M1 App Service status, evidence index, rebuild steps, repo layout
+cb89418 M1: App Service lab - slots, swap, autoscale, scale-up, access restrictions, Bicep + what-if, staging HTTPS fix, teardown
+uncommitted: 1 item(s)
+--- leftovers from M2 ---
+rg-compute-lab resource count: 0
+env cae-compute-lab: ERROR: (ResourceNotFound) The Resource 'Microsoft.App/managedEnvironments/cae-compute-lab' under resource group 'rg-compute-lab' was not found. For more details please go to https://aka.ms/ARMResourceNotFoundFix
+--- Standard_B1s in eastus: zones and restrictions ---
+zones offered: 1,2,3
+restrictions: Zone:NotAvailableForSubscription:2
+--- compute quota (eastus) ---
+  Total Regional vCPUs: 0 of 10
+  Virtual Machines: 0 of 25000
+  Virtual Machine Scale Sets: 0 of 2500
+  Standard BS Family vCPUs: 0 of 10
+--- prices (Retail Prices API, eastus) ---
+  Virtual Machines BS Series | B1s | 0.0104 per 1 Hour
+  Standard HDD Managed Disks | S4 LRS Disk Operations | 0.0005 per 10K
+  Standard HDD Managed Disks | S4 LRS Disk | 1.536 per 1/Month
+FINDING: Standard_B1s is restricted in zone 2 for this subscription (NotAvailableForSubscription). Design: scale set across zones 1 and 3 only.

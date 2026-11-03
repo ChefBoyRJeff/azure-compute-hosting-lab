@@ -1,6 +1,6 @@
 # Project 6 Plan: Azure Compute and App Hosting Lab
 
-**Status:** Plan approved 2026-11-01. M0 done 2026-11-01. **M1 (App Service) and M2 (containers) done 2026-11-02**, both torn down; see the Outcomes and Deviations sections. Next: M3 (VM Scale Set).
+**Status:** **Complete (2026-11-03).** M0-M4 done; all lab resources deleted. See the Outcomes and Deviations sections for M1-M3.
 
 ## Business Problem
 
@@ -109,6 +109,39 @@ Each milestone: **portal first** (how the exam asks about it), then **codify in 
 - Generic errors (`InaccessibleImage`) need elimination with evidence; change one variable to confirm.
 - Know which settings are **revision scope** (containers, probes, env vars, scale) and which are **application scope** (ingress, registries, secrets).
 - In Multiple revision mode, a new revision can take traffic immediately unless traffic is pinned by revision name.
+
+## M3 Outcomes and Deviations (2026-11-03)
+
+**Deviations from the approved plan**
+- **Zones 1 and 3 only:** `az vm list-skus` showed B1s (and B1ms) `NotAvailableForSubscription` in zone 2.
+- **Outbound access:** the portal required an outbound option for a Flexible scale set; chose per-instance public IPs (outbound only, NSG with no inbound rules). NAT gateway is blocked by the cost policy.
+- **Standard SSD** instead of Standard HDD (HDD OS disks retire September 8, 2028).
+- **Planned failure turned into an investigation** (RCA-005); added autoscale diagnostic logs to Log Analytics (`law-monitoring-lab`, P2's workspace).
+- **Move test** used an SSH key resource, which turned out not to support moves; recorded as a finding instead of repeated.
+- **Not codified in Bicep** (time; M1/M2 already demonstrate codification with what-if).
+
+**Measured results**
+
+| Test | Result | Evidence |
+|---|---|---|
+| Zone spread | 2 instances in zones 1 and 3; new instances also in 1/3 | `m3-01`, `m3-03` |
+| Inbound security | 0 custom rules; effective inbound: VNet, Azure LB, then DenyAllInBound | `m3-02` |
+| Run Command | Worked with no inbound ports (33 s); outbound HTTPS 200 | `m3-02` |
+| Autoscale, uneven load (run 1) | Scaled out 2→3 although raw average ~50% < 60; autoscale's observed value reached 60 | `m3-03` |
+| Autoscale, uneven load (run 2) | No scale-out; observed peak 54 | `m3-04` |
+| Autoscale, distributed load | Scale-out ~5 min after load start; scale-in 3→2 at 15:01:43Z; flapping protection seen in logs | `m3-05` |
+| Diagnostic log latency | First evaluation rows ~37 min after the diagnostic setting was created | `m3-05` |
+| Resize B1s → B1ms | 33 s including restart; 837 → 1842 MB; scale set model unchanged | `m3-06` |
+| Move to another RG | Rejected: `ResourceMoveNotSupported` for `sshPublicKeys`; nothing moved | `m3-07` |
+| Teardown | Both resource groups deleted; 0 tagged resources left | `m3-08` |
+
+**Rebuild M3 (portal):** Flexible scale set, Ubuntu 24.04 Gen2, B1s, Standard SSD, zones 1 and 3, VNet `10.60.0.0/16` subnet `10.60.0.0/24`, NIC public IP enabled with NSG Basic and no inbound ports, no load balancer; then custom autoscale on Percentage CPU (out > 60 avg 5 min, in < 25, min 2 / max 3) with a diagnostic setting to Log Analytics from the start.
+
+## M4 Outcome (2026-11-03)
+
+- Teardown verified for every milestone (`m1-12`, `m2-06`, `m3-08`).
+- Five RCAs in `docs/rca/`; interview guide in `docs/interview-guide.md`.
+- Estimated project cost: M1 ~$0.20-0.25, M2 ~$0.02, M3 ~$0.10 (estimates from list prices and run times; confirm in Cost Management).
 
 ## Out of Scope (conceptual only)
 

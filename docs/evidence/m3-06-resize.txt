@@ -1,0 +1,55 @@
+=== M3d: resize preflight (read-only) ===
+B1ms zones: 1,2,3; restrictions: Zone:NotAvailableForSubscription:2
+price: Virtual Machines BS Series | B1ms | 0.0207 per 1 Hour
+sizes available for vmss-compute-lab_05dc256b on its current hardware (B-series, 1-2 vCPU):
+NOTE: target vmss-compute-lab_05dc256b no longer exists: removed by the 15:01:43Z scale-in (3->2). Instances in an autoscaled scale set are not stable names; select the target from the live list.
+--- current instances ---
+   vmss-compute-lab_5045d786  zone=3  size=Standard_B1s  VM running
+   vmss-compute-lab_565a2110  zone=1  size=Standard_B1s  VM running
+resize target: vmss-compute-lab_5045d786
+sizes available on its current hardware (B-series, 1-2 vCPU):
+   Standard_B1ls  vCPU=1  memMB=512
+   Standard_B1ms  vCPU=1  memMB=2048
+   Standard_B1s  vCPU=1  memMB=1024
+   Standard_B2s  vCPU=2  memMB=4096
+   Standard_B12ms  vCPU=12  memMB=49152
+   Standard_B16ms  vCPU=16  memMB=65536
+   Standard_B16ls_v2  vCPU=16  memMB=32768
+   Standard_B16s_v2  vCPU=16  memMB=65536
+   Standard_B16als_v2  vCPU=16  memMB=32768
+   Standard_B16as_v2  vCPU=16  memMB=65536
+   Standard_B16pls_v2  vCPU=16  memMB=32768
+   Standard_B16ps_v2  vCPU=16  memMB=65536
+--- before resize: inside the VM (Run Command) ---
+Enable succeeded: 
+[stdout]
+mem_total_mb=837
+2026-11-03 13:45:41
+1
+
+[stderr]
+
+size (Azure): Standard_B1s
+--- after resize ---
+size (Azure): Standard_B1s  power: VM running
+Enable succeeded: 
+[stdout]
+mem_total_mb=837
+2026-11-03 13:45:41
+1
+
+[stderr]
+
+resize operation (activity log):
+NOTE: the 'after' snapshot above shows NO change (still B1s, 837 MB, same boot time 13:45:41, no VM write in the activity log): the portal resize was not submitted or was rejected before Azure accepted it. Investigating.
+--- resize via CLI (portal attempt not submitted; see NOTE above) ---
+resize vmss-compute-lab_5045d786 B1s -> B1ms: start 15:28:56Z, end 15:29:29Z, exit=0
+size (Azure): Standard_B1ms
+inside the VM after resize:
+mem_total_mb=1842
+booted=2026-11-03 15:29:24
+vcpu=1
+other instance (unchanged; Flexible allows mixed sizes):
+   vmss-compute-lab_5045d786  zone=3  size=Standard_B1ms
+   vmss-compute-lab_565a2110  zone=1  size=Standard_B1s
+scale set model size (applies to NEW instances only): Standard_B1s

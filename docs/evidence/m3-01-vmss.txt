@@ -1,0 +1,28 @@
+=== M3a: VMSS Flexible (portal): B1s, Ubuntu 24.04 Gen2, Trusted launch, Standard SSD, zones 1+3, 2 instances, per-instance public IP (outbound only), NSG with no inbound ports ===
+DESIGN: Flexible VMSS has no default outbound access and the portal required an outbound option. Chose per-instance Standard public IPs (~USD 0.005/h each) for OUTBOUND only; NIC NSG 'Basic' with NO inbound ports (DenyAllInBound). Alternatives: Standard LB outbound rule (more cost), NAT gateway (blocked by cost policy). Management via Run Command.
+{
+  "capacity": 2,
+  "orchestration": "Flexible",
+  "platformFaultDomainCount": 1,
+  "sku": "Standard_B1s",
+  "zones": [
+    "1",
+    "3"
+  ]
+}
+--- instances (public IPs masked) ---
+vmss-compute-lab_3d77e75c  zone=1  size=Standard_B1s  power=VM running  publicIp=present (masked)  privateIp=10.60.0.4
+vmss-compute-lab_5045d786  zone=3  size=Standard_B1s  power=VM running  publicIp=present (masked)  privateIp=10.60.0.5
+--- resources in rg ---
+  Microsoft.Compute/sshPublicKeys  vmss-compute-lab_key
+  Microsoft.Network/networkSecurityGroups  basicNsgvnet-compute-lab-nic01
+  Microsoft.Network/virtualNetworks  vnet-compute-lab
+  Microsoft.Compute/virtualMachineScaleSets  vmss-compute-lab
+  Microsoft.Compute/virtualMachines  vmss-compute-lab_3d77e75c
+  Microsoft.Compute/virtualMachines  vmss-compute-lab_5045d786
+  Microsoft.Compute/disks  vmss-compute-lab_3d77e75c_OsDisk_1_cc8ba3f57c7c43b1b7293ca652aa9bc5
+  Microsoft.Compute/disks  vmss-compute-lab_5045d786_OsDisk_1_e6d709d56fae460685e1a94de2158e23
+  Microsoft.Network/publicIPAddresses  publicIp-vnet-compute-lab-nic01-ff8df117
+  Microsoft.Network/networkInterfaces  vnet-compute-lab-nic01-ff8df117
+  Microsoft.Network/publicIPAddresses  publicIp-vnet-compute-lab-nic01-6ad584a2
+  Microsoft.Network/networkInterfaces  vnet-compute-lab-nic01-6ad584a2

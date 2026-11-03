@@ -1,0 +1,18 @@
+=== M3b: effective inbound security + Run Command (no SSH, no inbound ports) ===
+--- custom NSG rules (expect none) ---
+custom rule count: 0
+--- effective INBOUND rules on vmss-compute-lab_3d77e75c's NIC ---
+  65000  Allow defaultSecurityRules/AllowVnetInBound src=VirtualNetwork,System.Object[]
+  65001  Allow defaultSecurityRules/AllowAzureLoadBalancerInBound src=AzureLoadBalancer,System.Object[]
+  65500  Deny  defaultSecurityRules/DenyAllInBound src=0.0.0.0/0,System.Object[]
+--- Run Command (v1 action, RunShellScript) on vmss-compute-lab_3d77e75c ---
+start 13:47:20Z, end 13:47:53Z
+Enable succeeded: 
+[stdout]
+vmss-compH1ZNMK
+1
+ 13:47:25 up 1 min,  0 user,  load average: 0.38, 0.24, 0.09
+outbound_https=200
+
+[stderr]
+

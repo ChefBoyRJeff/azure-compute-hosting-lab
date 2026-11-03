@@ -1,0 +1,43 @@
+=== M3c repeat: same rules (out >60 avg 5 min, in <25, min 2/max 3), load on ONE instance, autoscale diagnostic logs ON ===
+instance: vmss-compute-lab_05dc256b  zone=1  VM running
+instance: vmss-compute-lab_5045d786  zone=3  VM running
+load target: vmss-compute-lab_05dc256b (not vmss-compute-lab_3d77e75c, to avoid depleted CPU credits)
+14:22:47Z  load started on vmss-compute-lab_05dc256b (720 s)
+14:23:54Z  capacity=2  autoscale_observed=
+14:24:57Z  capacity=2  autoscale_observed=
+14:25:59Z  capacity=2  autoscale_observed=
+14:27:02Z  capacity=2  autoscale_observed=1.0
+14:28:06Z  capacity=2  autoscale_observed=6.5
+14:29:08Z  capacity=2  autoscale_observed=12.0
+14:30:11Z  capacity=2  autoscale_observed=19.5
+14:31:14Z  capacity=2  autoscale_observed=30.0
+14:32:17Z  capacity=2  autoscale_observed=40.333333333333336
+14:33:19Z  capacity=2  autoscale_observed=54.0
+14:34:22Z  capacity=2  autoscale_observed=54.0
+14:35:25Z  capacity=2  autoscale_observed=51.0
+14:36:28Z  capacity=2  autoscale_observed=47.0
+14:37:30Z  capacity=2  autoscale_observed=47.0
+--- repeat result ---
+Load 14:22:47Z-~14:34:47Z on vmss-compute-lab_05dc256b only. Autoscale ObservedMetricValue peaked at 54 (< 60): NO scale-out. Planned failure reproduced on run 2.
+Scale-in after run 1 had removed vmss-compute-lab_3d77e75c (zone 1 had 2 instances; default scale-in policy balances zones).
+--- AutoscaleEvaluationsLog: rule evaluations (observed value with decimals, window used) ---
+--- the highest evaluation and the raw data points autoscale used ---
+NOTE: 'az monitor log-analytics query' failed (cmd.exe split the multi-line KQL at '|'); re-run via the Log Analytics query API with az rest and a JSON body file.
+--- AutoscaleEvaluationsLog: rule evaluations ---
+--- highest evaluation: raw data points autoscale used ---
+--- empty result; diagnosing: row counts, operation names, diagnostic setting ---
+1. row counts (last 2 h):
+2. evaluation operation names and whether ObservedValue is filled:
+3. diagnostic setting on the autoscale setting resource:
+   name=diag-autoscale-to-law  workspace=.../law-monitoring-lab  logs=AutoscaleEvaluations,AutoscaleScaleActions
+--- query 1 failed: 'first' is a reserved KQL word (my error). Query 2 = 0 rows: AutoscaleEvaluationsLog empty. Diagnostic setting confirmed correct. Checking ingestion/daily cap. ---
+a. any data arriving in the workspace (last 2 h, by table):
+b. billable ingestion today (MB) vs. 0.1 GB cap:
+   billable today:  MB (cap = ~102 MB)
+c. workspace operational messages (cap reached, ingestion problems), last 24 h:
+--- log status ---
+Diagnostic setting confirmed (AutoscaleEvaluations + AutoscaleScaleActions -> law-monitoring-lab). Workspace: no billable ingestion today and no _LogOperation messages -> daily cap NOT the cause. Autoscale log tables empty ~24 min after the setting was saved: ingestion delay (to be rechecked at the end). Query errors 'first' and 'TableName' were my KQL mistakes (reserved word / existing column).
+--- ROOT CAUSE ---
+Load concentrated on one instance; autoscale evaluates the AVERAGE across instances (~50% true average). Autoscale's computed value hovered 51-60 around the 60 threshold -> non-deterministic: run 1 scaled out (observed 60), run 2 did not (observed 54).
+Scaling out would not help anyway: no load balancer, so new instances receive no work.
+FIX (architectural): distribute load (load balancer or app-level distribution) so the average reflects demand. Demonstration: load both instances.

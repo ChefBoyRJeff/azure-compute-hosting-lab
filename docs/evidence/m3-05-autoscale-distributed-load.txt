@@ -1,0 +1,46 @@
+=== M3c fix demonstration: load on ALL instances (simulates evenly distributed traffic); same rules ===
+14:46:40Z  load started on: vmss-compute-lab_05dc256b, vmss-compute-lab_5045d786 (600 s)
+14:47:41Z  capacity=2  autoscale_observed=0.0
+14:48:44Z  capacity=2  autoscale_observed=0.0
+14:49:46Z  capacity=2  autoscale_observed=0.0
+14:50:49Z  capacity=2  autoscale_observed=1.5
+14:51:52Z  capacity=3  autoscale_observed=10.0
+14:52:54Z  capacity=3  autoscale_observed=22.5
+14:53:57Z  capacity=3  autoscale_observed=38.5
+14:55:00Z  capacity=3  autoscale_observed=61.0
+14:56:03Z  capacity=3  autoscale_observed=
+14:57:06Z  capacity=3  autoscale_observed=
+14:58:09Z  capacity=3  autoscale_observed=
+14:59:11Z  capacity=3  autoscale_observed=89.0
+--- autoscale log tables (recheck) ---
+   AutoscaleScaleActionsLog: rows=1 lastSeen=11/3/2026 3:01:43 PM
+   AutoscaleEvaluationsLog: rows=101 lastSeen=11/3/2026 3:05:25 PM
+--- evaluation logs now present (ingestion delayed ~25+ min after the diagnostic setting was created) ---
+coverage:
+   rows=118 earliest=11/3/2026 2:57:33 PM latest=11/3/2026 3:06:56 PM
+rule evaluations (scale-out rule, Threshold 60):
+scale action record:
+{"TimeGenerated":"2026-11-03T15:01:43.4314288Z","OperationName":"InstanceScaleAction","Category":"AutoscaleScaleActions","ResultType":"Succeeded","ResultDescription":"","TargetResourceId":"/subscriptions/<sub>/resourcegroups/rg-compute-lab/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-compute-lab","CreatedAsyncScaleActionJob":null,"CreatedAsyncScaleActionJobId":"","CurrentInstanceCount":3,"NewInstanceCount":2,"ScaleActionMessage":"","ScaleActionOperationId":"","ScaleActionOperationStatus":"","ScaleDirection":"Decrease"}
+capacity now: 2
+--- coverage limitation ---
+Evaluation logs begin 14:57:33Z (~37 min after the diagnostic setting was saved ~14:20Z): run 1, run 2 and the 14:51 fix scale-out are NOT covered. Captured: InstanceScaleAction Decrease 3->2 at 15:01:43Z (scale-in ~5 min after distributed load ended 14:56:40Z).
+Evaluation-window formatting error: some rows have null MetricStartTime/EndTime (my formatting assumed values).
+--- sample: evaluations around the 15:01:43 scale-in (null-safe) ---
+   11/3/2026 2:57:33 PM  ScaleRuleEvaluation    LessThan 25   observed=81.33   window=..
+   11/3/2026 2:58:03 PM  ScaleRuleEvaluation    LessThan 25   observed=78.37   window=..
+   11/3/2026 2:58:33 PM  ScaleRuleEvaluation    LessThan 25   observed=65.67   window=..
+   11/3/2026 2:59:03 PM  ScaleRuleEvaluation    LessThan 25   observed=59.61   window=..
+   11/3/2026 2:59:33 PM  ScaleRuleEvaluation    LessThan 25   observed=49.86   window=..
+   11/3/2026 3:00:05 PM  ScaleRuleEvaluation    LessThan 25   observed=40.6    window=..
+   11/3/2026 3:00:36 PM  ScaleRuleEvaluation    LessThan 25   observed=34.02   window=..
+   11/3/2026 3:01:09 PM  ScaleRuleEvaluation    LessThan 25   observed=29.25   window=..
+   11/3/2026 3:01:42 PM  ScaleRuleEvaluation    LessThan 25   observed=24.46   window=..
+   11/3/2026 3:01:42 PM  ScaleRuleEvaluation    GreaterThan 60   observed=36.69   window=..
+--- M3c CONCLUSION ---
+Confirmed: (1) autoscale acts on its own computed value, which differs from and lags the Metrics API chart; (2) uneven load (one hot instance, ~50% true average) vs. a 60% threshold was non-deterministic (run 1 scaled out at observed 60, run 2 did not at observed 54); (3) distributed load scaled out deterministically ~5 min after load start (14:46:40 -> ~14:51:52Z) and scaled in 3->2 at 15:01:43Z.
+Not determined: why run 1's evaluated value reached 60 (logs were not yet flowing).
+Fix: distribute load (load balancer / app-level) so the average reflects demand; enable autoscale diagnostic logs when the setting is created (ingestion here started ~37 min later).
+--- evaluation log findings (14:57-15:02Z) ---
+Evaluations run ~every 30 s. Scale-in rule (LessThan 25) observed fell 81.33 -> 24.46; crossed at 15:01:42Z; scale action 3->2 at 15:01:43Z.
+FLAPPING PROTECTION observed: at 15:01:42Z the scale-out rule (GreaterThan 60) was evaluated at 36.69 = 24.46 x 3/2, i.e. the projected average after removing one instance; 36.69 < 60, so scale-in was allowed.
+MetricStartTime/MetricEndTime were empty in these records.

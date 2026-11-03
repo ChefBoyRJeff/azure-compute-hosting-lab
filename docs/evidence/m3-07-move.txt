@@ -1,0 +1,11 @@
+=== M3e: move a resource between resource groups (same subscription) ===
+before: .../resourceGroups/RG-COMPUTE-LAB/providers/Microsoft.Compute/sshPublicKeys/vmss-compute-lab_key
+move: start 15:30:10Z, end 15:30:44Z, exit=1
+after:  .../resourceGroups//providers/Microsoft.Compute/sshPublicKeys/vmss-compute-lab_key
+CORRECTION: the 'after' line above is empty because the move FAILED; the key never left rg-compute-lab. The 'old ID still resolves' check did not run (PowerShell syntax error in my command).
+Move error (from the console, sanitized):
+  (ResourceMoveValidationFailed) The resource batch move request has '1' validation errors.
+  (ResourceMoveNotSupported) Resource move is not supported for resource types 'Microsoft.Compute/sshPublicKeys'.
+FINDING: not every resource type can be moved. ARM validates the whole move batch first and moves nothing if any resource fails validation, so the failed request left everything in place.
+Lesson: check Microsoft's "move operation support for resources" list before planning a move; moves within a subscription change the resource ID (the resource group segment), so anything that references the old ID must be updated.
+Not repeated: both resource groups were deleted in teardown right after this (m3-08).

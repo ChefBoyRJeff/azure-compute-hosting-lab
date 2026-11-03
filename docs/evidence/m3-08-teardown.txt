@@ -1,0 +1,24 @@
+=== M3/M4 teardown: delete rg-compute-lab (scale set, VMs, disks, NICs, public IPs, NSG, VNet, autoscale setting + its diagnostic setting) and rg-compute-lab-move ===
+--- before ---
+  [rg-compute-lab] Microsoft.Compute/sshPublicKeys  vmss-compute-lab_key
+  [rg-compute-lab] Microsoft.Network/networkSecurityGroups  basicNsgvnet-compute-lab-nic01
+  [rg-compute-lab] Microsoft.Network/virtualNetworks  vnet-compute-lab
+  [rg-compute-lab] Microsoft.Compute/virtualMachineScaleSets  vmss-compute-lab
+  [rg-compute-lab] Microsoft.Compute/virtualMachines  vmss-compute-lab_5045d786
+  [rg-compute-lab] Microsoft.Compute/disks  vmss-compute-lab_5045d786_OsDisk_1_e6d709d56fae460685e1a94de2158e23
+  [rg-compute-lab] Microsoft.Network/publicIPAddresses  publicIp-vnet-compute-lab-nic01-6ad584a2
+  [rg-compute-lab] Microsoft.Network/networkInterfaces  vnet-compute-lab-nic01-6ad584a2
+  [rg-compute-lab] microsoft.insights/autoscalesettings  autoscale-vmss-compute-lab
+  [rg-compute-lab] Microsoft.Compute/virtualMachines  vmss-compute-lab_565a2110
+  [rg-compute-lab] Microsoft.Compute/disks  vmss-compute-lab_565a2110_OsDisk_1_bd001f04f4bf428f9200a172dea9e799
+  [rg-compute-lab] Microsoft.Network/publicIPAddresses  publicIp-vnet-compute-lab-nic01-47a67d16
+  [rg-compute-lab] Microsoft.Network/networkInterfaces  vnet-compute-lab-nic01-47a67d16
+delete rg-compute-lab : start 15:30:50Z, end 15:33:09Z, exit=0
+delete rg-compute-lab-move : start 15:33:09Z, end 15:34:26Z, exit=0
+--- after ---
+rg-compute-lab exists: false
+rg-compute-lab-move exists: false
+VMs in subscription tagged project=azure-compute-hosting-lab: 0
+budget kept (free; catches any trailing charges): budget-compute-hosting-lab
+NOTE: the line labelled 'VMs in subscription tagged ...' counts ALL resources with tag project=azure-compute-hosting-lab (not only VMs): 0 remaining.
+Resize result (m3-06) was captured before teardown: B1s -> B1ms in 33 s (15:28:56-15:29:29Z), memory 837 -> 1842 MB, new boot time 15:29:24Z (restart), other instance stayed B1s, scale set model stayed B1s.
