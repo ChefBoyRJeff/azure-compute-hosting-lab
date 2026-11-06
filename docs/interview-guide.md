@@ -46,9 +46,33 @@ Hands-on lab work in a personal pay-as-you-go subscription (not production). Eve
 4. Which settings would you add to the M2 Bicep to make a fresh deployment work in one pass?
 5. What would you put in a policy to prevent the staging-slot HTTP gap from recurring?
 
+## Lab 6: VM operations (2026-11-05)
+
+**2-minute walkthrough.** Two B1s VMs in an availability set, managed only through Run Command. I checked where the platform placed them (fault domains 0 and 1), compared restart with redeploy from inside the VM, did a full disk cycle (attach, online snapshot, online expansion, restore to the other VM with a checksum), enabled encryption at host, broke a Custom Script Extension on purpose, then codified the build in Bicep and fixed two findings through code.
+
+**Best stories**
+- **Restart vs redeploy, proved from inside the VM.** I read the physical host name from the Hyper-V key-value exchange file (published only as a hash), and left marker files on the temp disk and the OS disk. Restart: same host, temp disk kept. Redeploy: new host, temp disk wiped, OS disk and IP kept. That's why the temp disk is scratch space only.
+- **"Succeeded" isn't healthy (RCA-006).** A failed bootstrap script left the VM Succeeded / Running with no portal banner. Only the extension status showed it, and only the CLI and the instance view had the actual stderr. Lesson: monitor extension status, and make scripts idempotent.
+- **Exit code 0 isn't proof.** Removing a VM from its availability set returned success and changed nothing. Moving it to another set gave the real answer: `PropertyChangeNotAllowed`.
+- **A fix through code that needed one more step.** The VNet from the VM wizard had default outbound access on. What-if showed the fix (`defaultOutboundAccess: false`); after the deploy the VMs could still reach the internet until a deallocate/start, as Microsoft's docs say. I tested before and after from inside the VMs.
+
+**Likely questions**
+- **"Availability set vs availability zones?"** A set spreads VMs over fault domains (racks) and update domains (maintenance groups) in one datacenter. Zones are separate datacenters. I saw the placement (FD0/UD0, FD1/UD1) and learned the set is fixed at creation; changing it means recreating the VM and keeping its disks.
+- **"When would you redeploy a VM?"** When a VM has a host-level problem that a restart doesn't fix. I measured about 1 min 41 s from request to boot; the temp disk is lost.
+- **"How do you expand a disk without downtime?"** Expand it in Azure, rescan in the guest, then grow the partition and filesystem. In my lab the guest still saw 4 GiB until the rescan.
+- **"SSE vs encryption at host vs ADE?"** SSE encrypts managed disks at rest and is always on. Encryption at host adds the temp disk, caches and data on its way to Storage, and needs the VM deallocated to change. ADE encrypts inside the guest, can't be combined with encryption at host, and the portal says it retires on 15 September 2028.
+- **"Why mount by UUID?"** My data disk was sdc1, then sda1 after a deallocate, then sdc1 again. A device-name entry in fstab would have broken.
+
+**Follow-up challenges to practise**
+1. What changes if vm-as-1 and vm-as-2 must survive a zone failure? Which properties can't be changed in place?
+2. How would you alert on a failed extension across 200 VMs?
+3. Your snapshot needs to be application-consistent for a database. What do you change?
+4. A team relies on default outbound access. How do you move them to private subnets without breaking them?
+
 ## What I'd improve for production
 
 - Health check + 2 instances on App Service; HTTP-based probes (`/health`) instead of TCP on Container Apps.
 - Load balancer in front of the scale set; autoscale diagnostic logs from day one; alert on scale actions.
 - CI/CD (as in Project 3) for the Bicep, with what-if in pull requests.
 - Codify the scale set in Bicep.
+- Lab 6: an explicit outbound method (NAT gateway) if VMs need updates; extension health alerts; application-consistent backups (Azure Backup) instead of manual snapshots.

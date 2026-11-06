@@ -1,0 +1,50 @@
+=== Lab 6 teardown, 2026-11-05 20:34 ===
+--- 0. last check: vm-as-1 data disk mounted from fstab after the M6 stop/start ---
+  run command exit=0 datadrive=/dev/sdc1  payload_checksum=MATCH
+--- 1. inventory before delete ---
+  Microsoft.Compute/availabilitySets	avail-lab6
+  Microsoft.Compute/disks	disk-lab6-data
+  Microsoft.Compute/disks	disk-lab6-restored
+  Microsoft.Compute/disks	vm-as-1<id>
+  Microsoft.Compute/disks	vm-as-2<id>
+  Microsoft.Compute/snapshots	snap-lab6-data
+  Microsoft.Compute/virtualMachines	vm-as-1
+  Microsoft.Compute/virtualMachines	vm-as-2
+  Microsoft.Compute/virtualMachines/extensions	vm-as-2/CustomScript
+  Microsoft.DevTestLab/schedules	shutdown-computevm-vm-as-1
+  Microsoft.DevTestLab/schedules	shutdown-computevm-vm-as-2
+  Microsoft.Network/networkInterfaces	vm-as-1569
+  Microsoft.Network/networkInterfaces	vm-as-2396
+  Microsoft.Network/networkSecurityGroups	vm-as-1-nsg
+  Microsoft.Network/networkSecurityGroups	vm-as-2-nsg
+  Microsoft.Network/virtualNetworks	vnet-lab6
+  count: 16
+--- 2. delete rg-compute-lab (20:35:15) ---
+  delete exit=0 finished 20:37:19
+--- 3. verify ---
+  rg-compute-lab exists: false
+  VMs: 0  disks: 0  snapshots: 0  availability sets: 0  public IPs: 0
+  resource group left: rg-hubspoke-lab
+  resource group left: NetworkWatcherRG
+  resource group left: rg-monitoring-lab
+  resource group left: rg-cicd-dev
+  resource group left: rg-cicd-prod
+  resource group left: rg-backup-lab
+  resource group left: DefaultResourceGroup-EUS
+  EncryptionAtHost feature (kept, free, no effect without VMs using it): Registered
+  budget budget-az104-lab: spent 0.7606962304344932 of 10.0
+  budget budget-backup-dr-lab: spent 0.1573434 of 5.0
+  budget budget-compute-hosting-lab: spent 0.3440676718550209 of 5.0
+  budget budget-storage-pe-lab: spent 0.0623624513794723 of 5.0
+--- 4. local cleanup ---
+  deleted local key file: lab6_rsa (exists now: False)
+  deleted local key file: lab6_rsa.pub (exists now: False)
+  infra/export/lab6 kept locally (gitignored; git sees: '')
+  leak check (should be 0): 0
+--- 5. which list command printed "the following arguments are required: --resource-group/-g"? (here and in lab6-00 section 3) ---
+  az vm list                    exit=255 -o was unexpected at this time.
+  az disk list                  exit=255 -o was unexpected at this time.
+  az snapshot list              exit=255 -o was unexpected at this time.
+  az network public-ip list     exit=255 -o was unexpected at this time.
+  az vm availability-set list   exit=255 -o was unexpected at this time.
+  NOTE: if a command other than "vm availability-set list" failed, the lab6-00 CORRECTION blamed the wrong command; the 0 counts from a failed command were not real checks. Teardown itself is verified by "rg-compute-lab exists: false" and the subscription-wide checks above.

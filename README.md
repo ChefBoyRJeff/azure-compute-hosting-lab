@@ -4,7 +4,7 @@ Hands-on lab covering the main ways Azure runs workloads, and when to choose eac
 
 Built as a hands-on project while studying for **AZ-104: Microsoft Azure Administrator**. This is lab work in a personal subscription, not a production environment.
 
-> **Status (2026-11-03): complete.** M0-M4 done; all lab resources deleted (0 remaining). Plan and measured results: [`docs/plan.md`](docs/plan.md). Root-cause analyses: [`docs/rca/`](docs/rca/). Interview guide: [`docs/interview-guide.md`](docs/interview-guide.md).
+> **Status (2026-11-05): complete.** M0-M4 done (2026-11-03); **Lab 6: VM operations** added 2026-11-05. All lab resources deleted (0 remaining). Plan and measured results: [`docs/plan.md`](docs/plan.md). Root-cause analyses: [`docs/rca/`](docs/rca/). Interview guide: [`docs/interview-guide.md`](docs/interview-guide.md).
 
 ## Architecture
 
@@ -118,6 +118,63 @@ Built in the portal, managed from the CLI (not codified in Bicep: see Limitation
 | `m3-07-move.txt` | Failed move and why |
 | `m3-08-teardown.txt` | Deletion and verification |
 
+## Lab 6: VM Operations (done, 2026-11-05)
+
+Added after M0-M4 to cover the VM operations that the scale set milestone didn't: availability sets, restart vs redeploy, disk operations, encryption at host, and extension troubleshooting. Built in the portal, checked from inside the VMs with Run Command (no inbound ports, no public IPs), then codified in [`infra/lab6/vms.bicep`](infra/lab6/vms.bicep) and fixed through code.
+
+```mermaid
+flowchart LR
+  subgraph RG[rg-compute-lab - East US]
+    as[Availability set avail-lab6<br/>Aligned, 2 FD / 5 UD]
+    subgraph V[vnet-lab6: 10.3.0.0/16 + 10.60.0.0/16]
+      s1[default 10.3.0.0/24] --- vm1[vm-as-1 B1s<br/>FD0/UD0, encryption at host]
+      s2[snet-vm 10.60.1.0/24] --- vm2[vm-as-2 B1s<br/>FD1/UD1, CustomScript]
+    end
+    as -.- vm1 & vm2
+    d1[(disk-lab6-data<br/>4 -> 8 GiB)] --- vm1
+    d1 -.snapshot.-> sn[(snap-lab6-data<br/>incremental)]
+    sn -.restore.-> d2[(disk-lab6-restored)] --- vm2
+  end
+  ops([Operator]) -.Run Command.-> vm1 & vm2
+```
+
+| Milestone | What was tested | Result |
+|---|---|---|
+| M1 Availability set | 2 VMs in `avail-lab6`; remove a VM from the set; move it to another set | VMs placed in **FD0/UD0** and **FD1/UD1**. Removing was a **silent no-op** (exit 0, still in the set); moving was rejected: `PropertyChangeNotAllowed` |
+| M2 Restart vs redeploy | Physical host (hashed), temp disk marker, OS disk marker, IP, FD/UD | Restart: **same host**, temp disk kept. Redeploy: **new host**, **temp disk wiped**, OS disk/IP/FD/UD kept; ~1 min 41 s request to boot |
+| M3 Disks | Attach, format by LUN, snapshot online, expand online, restore to the other VM | Snapshot of a mounted disk worked; **4 → 8 GiB** online, but the guest needed a **rescan**, `growpart` and `resize2fs`; restored copy: **checksum match**, post-snapshot file **absent** |
+| M4 Encryption at host | Register feature, enable on a running VM, deallocate → enable → start | Feature registered in **4 s**; running VM rejected (`OperationNotAllowed ... only when VM is in deallocated state`); SSE type unchanged. Disks created by the portal wizards allowed **export (AllowAll)**: all set to DenyAll |
+| M5 Extension failure | Custom Script with a missing prerequisite ([RCA-006](docs/rca/rca-006-custom-script-extension-failure.md)) | Extension **Provisioning failed** while the VM stayed **Succeeded / Running**; root cause in the instance view stderr; fixed with an idempotent script |
+| M6 Bicep | What-if against the portal build, then fixes through code | Pass 1: **0 real drift** (6 noise lines); pass 2: exactly 2 fixes (private subnets, disk tags); outbound **REACHABLE → UNREACHABLE** only after deallocate/start |
+
+**Findings worth knowing**
+- **An exit code of 0 is not proof.** `az vm update --remove availabilitySet` sent a real write that succeeded and changed nothing.
+- **fstab by UUID saved the mount.** The data disk was `/dev/sdc1`, then `/dev/sda1` after a deallocate, then `/dev/sdc1` again; it mounted every time because fstab used the UUID with `nofail`.
+- **Provisioning state is not health.** A failed extension left the VM `Succeeded`, and the portal Overview had no banner. The portal's "View detailed status" had the least detail (`ComponentStatus/ErrorClarification/failed/2`); the instance view had the stderr.
+- **Default outbound access was on** in the VNet the VM wizard created (`defaultOutboundAccess` unset), although Microsoft's docs say the portal defaults to private subnets. The fix through code reached the VMs only after a stop (deallocate) and start.
+- **Portal text on ADE:** *"Azure Disk Encryption ... will be retired on 15 September 2028 ... migrate to encryption at host"* and *"Azure Disk Encryption can't be enabled on disks that have encryption at host enabled."*
+
+| Evidence | Contents |
+|---|---|
+| `lab6-00-preflight.txt` | Sizes and encryption-at-host support, availability set SKUs, quota, policy detail, prices |
+| `lab6-01-availability-set.txt` | Placement by FD/UD, exposure, two negative tests, findings F1-F11 |
+| `lab6-02-restart-vs-redeploy.txt` | Three probes from inside the VM and the summary table |
+| `lab6-03-disks.txt` | Format by LUN, snapshot, online expansion, restore with checksum |
+| `lab6-04-encryption-at-host.txt` | Feature registration, rejected change, enable, disk network-access fix |
+| `lab6-05-extension-failure.txt` | Break, diagnosis (CLI, instance view, guest logs), fix |
+| `lab6-06-bicep-whatif.txt` | Lint failure and fix, what-if passes 1-3, deploy, outbound before/after |
+| `lab6-07-teardown.txt` | Final checks, inventory, deletion and verification |
+
+**Rebuild from code** (a fresh rebuild needs the data disk to exist before attaching, and the restored disk only exists after the M3 restore, so remove `disk-lab6-restored` from `vm-as-2`'s `dataDisks` for a clean build):
+
+```powershell
+ssh-keygen -t rsa -b 4096 -f $HOME\.ssh\lab6_rsa
+az group create -n rg-compute-lab -l eastus
+az deployment group what-if -g rg-compute-lab -f infra/lab6/vms.bicep -p sshPublicKey="$((Get-Content $HOME\.ssh\lab6_rsa.pub -Raw).Trim())" applyFixes=true
+```
+
+Cost: 2 × B1s at $0.0104/h plus small Standard SSD disks and an incremental snapshot, for about 2.5 hours: estimated well under $0.25.
+
 ## Root-Cause Analyses
 
 | RCA | Incident |
@@ -127,6 +184,7 @@ Built in the portal, managed from the CLI (not codified in Bicep: see Limitation
 | [RCA-003](docs/rca/rca-003-aci-acr-pull-denied.md) | ACI pull denied: authorization, not authentication |
 | [RCA-004](docs/rca/rca-004-container-apps-probe-port.md) | Container Apps revision ActivationFailed: probes on the wrong port |
 | [RCA-005](docs/rca/rca-005-vmss-autoscale-nondeterministic.md) | Scale set autoscale non-deterministic under uneven load |
+| [RCA-006](docs/rca/rca-006-custom-script-extension-failure.md) | Custom Script Extension failed while the VM reported Succeeded (Lab 6) |
 
 ## When to Choose Which (from this lab)
 
@@ -135,11 +193,13 @@ Built in the portal, managed from the CLI (not codified in Bicep: see Limitation
 | Web app or API, deploy code, slots | **App Service** | Swaps, warm-up ping, autoscale in 5-6 min |
 | One container on demand, billed per second | **Container Instances** | Created in seconds; no scaling or revisions |
 | Containerized API that scales with requests, to zero | **Container Apps** | 1 → 3 replicas in < 20 s; back to 0 after ~5 min; revision traffic split |
+| A few named VMs that must not fail together, one datacenter | **Availability set** (2-3 fault domains) | Lab 6: VMs placed in FD0/UD0 and FD1/UD1; the set can't be changed after creation |
 | Full OS control, identical VMs, zones | **VM Scale Set** | You manage OS, networking, outbound access and load distribution yourself |
 
 ## Limitations and Possible Improvements
 
-- **M3 is not codified in Bicep**; rebuild from the steps in `docs/plan.md` (M3 section).
+- **M3 is not codified in Bicep**; rebuild from the steps in `docs/plan.md` (M3 section). Lab 6 is codified (`infra/lab6/vms.bicep`), but leaves the snapshot, the restored disk, the extension and the auto-shutdown schedules out on purpose.
+- Lab 6 VMs have no outbound internet after the fix (private subnets, no NAT gateway: blocked by the cost policy); Run Command still works.
 - App Service ran in West US 3 because of the East US quota block; App Service quota support ticket outcome not recorded.
 - Autoscale evaluation logs were not flowing during M3 runs 1-2, so the exact cause of run 1's evaluated value (60) is not determined.
 - Production improvements: Health check and 2+ instances for App Service, HTTP probes on Container Apps, a load balancer for the scale set, autoscale diagnostic logs from creation, and CI/CD for the Bicep (as in Project 3).
@@ -152,7 +212,9 @@ All resource groups are deleted. The budget `budget-compute-hosting-lab` is free
 az consumption budget delete --budget-name budget-compute-hosting-lab
 ```
 
-Also delete any downloaded SSH private key for `vmss-compute-lab_key`.
+Also delete any downloaded SSH private key for `vmss-compute-lab_key`. The Lab 6 key (`~/.ssh/lab6_rsa`) was deleted in teardown.
+
+Lab 6 registered the subscription feature `Microsoft.Compute/EncryptionAtHost`. It's free and does nothing until a VM uses it; it was kept. To remove it: `az feature unregister --namespace Microsoft.Compute --name EncryptionAtHost`.
 
 ## Repository Layout
 
@@ -161,9 +223,10 @@ Also delete any downloaded SSH private key for `vmss-compute-lab_key`.
 | `infra/main.bicep`, `infra/main.bicepparam` | M1 App Service build (plan, app, slot, settings, basic auth policy, autoscale) |
 | `infra/budget.bicep`, `infra/budget.example.bicepparam` | $5 budget on the resource group (real alert email kept in a gitignored local file) |
 | `infra/m2.bicep`, `infra/m2.bicepparam` | M2 containers (registry, identity + AcrPull, environment, container app) |
+| `infra/lab6/vms.bicep` | Lab 6: availability set, VNet, NSGs, NICs, data disk and two VMs; `applyFixes` adds private subnets and disk tags |
 | `container/` | Container app source (`app.py`, `Dockerfile`): reports version, revision and replica; `/health`, `/slow` |
 | `app/` | Test app: `index.php` reports version, slot setting and instance; `health.php` is the swap health check |
 | `docs/plan.md` | Plan, costs, outcomes and deviations |
-| `docs/rca/` | Root-cause analyses (5) |
+| `docs/rca/` | Root-cause analyses (6) |
 | `docs/interview-guide.md` | Walkthrough, deep dives, likely questions |
 | `docs/evidence/` | Sanitized command output for every milestone |

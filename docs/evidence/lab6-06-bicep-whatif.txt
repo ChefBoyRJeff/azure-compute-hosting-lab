@@ -1,0 +1,199 @@
+=== Lab 6 M6: Bicep what-if against the portal build, 2026-11-05 20:21 ===
+--- 1. build + lint ---
+  build exit=1
+  ERROR: D:\Development\azure-compute-hosting-lab\infra\lab6\vms.bicep(222,22) : Error adminusername-should-not-be-literal: Property 'adminUserName' should not use a literal value. Use a param instead. Found literal string value "azureuser" [https://aka.ms/bicep/linter-diagnostics#adminusername-should-not-be-literal]
+  STOP: build failed - what-if not run
+  FINDING: first build failed on linter rule adminusername-should-not-be-literal (an error in this repo's bicepconfig.json): adminUsername was the literal "azureuser". Fixed by making it a parameter (default azureuser). The linter blocked it before anything reached Azure.
+--- 1b. build + lint (after fix) ---
+  build exit=0
+--- 2. what-if pass 1: applyFixes=false (the build as it is; expect no real changes) ---
+  what-if exit=0
+  You can help us improve the accuracy of the result by opening an issue here: https://aka.ms/WhatIfIssues
+  NOTICE! - Want to get What-if without noise? Move to Deployment Stacks What-If https://aka.ms/stackswhatifGA
+    - Delete
+    ~ Modify
+    = Nochange
+    * Ignore
+    x Noeffect
+  The deployment will update the following scope:
+  Scope: /subscriptions/<id>/resourceGroups/rg-compute-lab
+    ~ Microsoft.Compute/disks/disk-lab6-data [2024-03-02]
+      - properties.diskIOPSReadWrite: 500
+      - properties.diskMBpsReadWrite: 100
+      - properties.encryption:
+          type: "EncryptionAtRestWithPlatformKey"
+      - properties.maxShares:         1
+    ~ Microsoft.Compute/virtualMachines/vm-as-1 [2024-07-01]
+      ~ properties.storageProfile.dataDisks: [
+        ~ 0:
+          - toBeDetached:            false
+          - writeAcceleratorEnabled: false
+        ]
+      x properties.storageProfile.dataDisks[0].managedDisk:
+          id: "/subscriptions/<id>/resourceGroups/rg-compute-lab/providers/Microsoft.Compute/disks/disk-lab6-data"
+      x properties.storageProfile.osDisk.managedDisk.storageAccountType: "StandardSSD_LRS"
+    ~ Microsoft.Compute/virtualMachines/vm-as-2 [2024-07-01]
+      ~ properties.storageProfile.dataDisks: [
+        ~ 0:
+          - toBeDetached:            false
+          - writeAcceleratorEnabled: false
+        ]
+      x properties.storageProfile.dataDisks[0].managedDisk:
+          id: "/subscriptions/<id>/resourceGroups/rg-compute-lab/providers/Microsoft.Compute/disks/disk-lab6-restored"
+      x properties.storageProfile.osDisk.managedDisk.storageAccountType: "StandardSSD_LRS"
+    ~ Microsoft.Network/networkInterfaces/vm-as-1569 [2024-05-01]
+      - kind:                                              "Regular"
+      - properties.allowPort25Out:                         false
+      - properties.auxiliaryMode:                          "None"
+      - properties.auxiliarySku:                           "None"
+      - properties.disableTcpStateTracking:                false
+      ~ properties.ipConfigurations: [
+        ~ 0:
+          - properties.privateIPAddress: "10.3.0.4"
+        ]
+      x properties.ipConfigurations[0].properties.primary: true
+    ~ Microsoft.Network/networkInterfaces/vm-as-2396 [2024-05-01]
+      - kind:                                              "Regular"
+      - properties.allowPort25Out:                         false
+      - properties.auxiliaryMode:                          "None"
+      - properties.auxiliarySku:                           "None"
+      - properties.disableTcpStateTracking:                false
+      ~ properties.ipConfigurations: [
+        ~ 0:
+          - properties.privateIPAddress: "10.60.1.4"
+        ]
+      x properties.ipConfigurations[0].properties.primary: true
+    ~ Microsoft.Network/virtualNetworks/vnet-lab6 [2024-05-01]
+      - properties.privateEndpointVNetPolicies: "Disabled"
+    = Microsoft.Compute/availabilitySets/avail-lab6 [2024-07-01]
+    = Microsoft.Network/networkSecurityGroups/vm-as-1-nsg [2024-05-01]
+    = Microsoft.Network/networkSecurityGroups/vm-as-2-nsg [2024-05-01]
+    * Microsoft.Compute/disks/disk-lab6-restored
+    * Microsoft.Compute/disks/vm-as-1<id>
+    * Microsoft.Compute/disks/vm-as-2<id>
+    * Microsoft.Compute/snapshots/snap-lab6-data
+    * Microsoft.Compute/virtualMachines/vm-as-2/extensions/CustomScript
+    * Microsoft.DevTestLab/schedules/shutdown-computevm-vm-as-1
+    * Microsoft.DevTestLab/schedules/shutdown-computevm-vm-as-2
+  Resource changes: 6 to modify, 3 no change, 7 to ignore.
+--- 3. what-if pass 2: applyFixes=true (expect only the 2 fixes) ---
+  what-if exit=0
+  You can help us improve the accuracy of the result by opening an issue here: https://aka.ms/WhatIfIssues
+  NOTICE! - Want to get What-if without noise? Move to Deployment Stacks What-If https://aka.ms/stackswhatifGA
+    - Delete
+    + Create
+    ~ Modify
+    = Nochange
+    * Ignore
+    x Noeffect
+  The deployment will update the following scope:
+  Scope: /subscriptions/<id>/resourceGroups/rg-compute-lab
+    ~ Microsoft.Compute/disks/disk-lab6-data [2024-03-02]
+      - properties.diskIOPSReadWrite: 500
+      - properties.diskMBpsReadWrite: 100
+      - properties.encryption:
+          type: "EncryptionAtRestWithPlatformKey"
+      - properties.maxShares:         1
+      + tags:
+          costCenter:  "CC-1001"
+          environment: "lab"
+          lab:         "lab6"
+          owner:       "jeff"
+          project:     "azure-compute-hosting-lab"
+    ~ Microsoft.Compute/virtualMachines/vm-as-1 [2024-07-01]
+      ~ properties.storageProfile.dataDisks: [
+        ~ 0:
+          - toBeDetached:            false
+          - writeAcceleratorEnabled: false
+        ]
+      x properties.storageProfile.dataDisks[0].managedDisk:
+          id: "/subscriptions/<id>/resourceGroups/rg-compute-lab/providers/Microsoft.Compute/disks/disk-lab6-data"
+      x properties.storageProfile.osDisk.managedDisk.storageAccountType: "StandardSSD_LRS"
+    ~ Microsoft.Compute/virtualMachines/vm-as-2 [2024-07-01]
+      ~ properties.storageProfile.dataDisks: [
+        ~ 0:
+          - toBeDetached:            false
+          - writeAcceleratorEnabled: false
+        ]
+      x properties.storageProfile.dataDisks[0].managedDisk:
+          id: "/subscriptions/<id>/resourceGroups/rg-compute-lab/providers/Microsoft.Compute/disks/disk-lab6-restored"
+      x properties.storageProfile.osDisk.managedDisk.storageAccountType: "StandardSSD_LRS"
+    ~ Microsoft.Network/networkInterfaces/vm-as-1569 [2024-05-01]
+      - kind:                                              "Regular"
+      - properties.allowPort25Out:                         false
+      - properties.auxiliaryMode:                          "None"
+      - properties.auxiliarySku:                           "None"
+      - properties.disableTcpStateTracking:                false
+      ~ properties.ipConfigurations: [
+        ~ 0:
+          - properties.privateIPAddress: "10.3.0.4"
+        ]
+      x properties.ipConfigurations[0].properties.primary: true
+    ~ Microsoft.Network/networkInterfaces/vm-as-2396 [2024-05-01]
+      - kind:                                              "Regular"
+      - properties.allowPort25Out:                         false
+      - properties.auxiliaryMode:                          "None"
+      - properties.auxiliarySku:                           "None"
+      - properties.disableTcpStateTracking:                false
+      ~ properties.ipConfigurations: [
+        ~ 0:
+          - properties.privateIPAddress: "10.60.1.4"
+        ]
+      x properties.ipConfigurations[0].properties.primary: true
+    ~ Microsoft.Network/virtualNetworks/vnet-lab6 [2024-05-01]
+      - properties.privateEndpointVNetPolicies: "Disabled"
+      ~ properties.subnets: [
+        ~ 0:
+          + properties.defaultOutboundAccess: false
+        ~ 1:
+          + properties.defaultOutboundAccess: false
+        ]
+    = Microsoft.Compute/availabilitySets/avail-lab6 [2024-07-01]
+    = Microsoft.Network/networkSecurityGroups/vm-as-1-nsg [2024-05-01]
+    = Microsoft.Network/networkSecurityGroups/vm-as-2-nsg [2024-05-01]
+    * Microsoft.Compute/disks/disk-lab6-restored
+    * Microsoft.Compute/disks/vm-as-1<id>
+    * Microsoft.Compute/disks/vm-as-2<id>
+    * Microsoft.Compute/snapshots/snap-lab6-data
+    * Microsoft.Compute/virtualMachines/vm-as-2/extensions/CustomScript
+    * Microsoft.DevTestLab/schedules/shutdown-computevm-vm-as-1
+    * Microsoft.DevTestLab/schedules/shutdown-computevm-vm-as-2
+  Resource changes: 6 to modify, 3 no change, 7 to ignore.
+--- 4. outbound internet from inside each VM, BEFORE the fix (prediction: reachable) ---
+  vm-as-1: run command exit=0 outbound=REACHABLE http=200
+  vm-as-2: run command exit=0 outbound=REACHABLE http=200
+  leak check (should be 0): 0
+  REVIEW pass 1: 6 Modify, all noise (defaults/read-only values not declared: disk IOPS/MBps/encryption/maxShares, dataDisk toBeDetached/writeAcceleratorEnabled, NIC kind/allowPort25Out/auxiliary*/disableTcpStateTracking/dynamic privateIPAddress, VNet privateEndpointVNetPolicies). x = no effect. 3 NoChange (avset, both NSGs). 7 Ignore (undeclared on purpose). Real drift: 0.
+  REVIEW pass 2: the same noise plus exactly the two fixes: + tags on disk-lab6-data, + defaultOutboundAccess=false on subnets default and snet-vm. Matches the prediction.
+--- 5. deploy applyFixes=true (20:26:07) ---
+  deploy exit=0 result=Succeeded
+  finished 20:26:43
+  vnet-lab6/default: defaultOutboundAccess=false
+  vnet-lab6/snet-vm: defaultOutboundAccess=false
+  disk-lab6-data tags: costCenter,environment,lab,owner,project
+  vm-as-1: power=VM running privateIP=10.3.0.4 encryptionAtHost=true
+  vm-as-2: power=VM running privateIP=10.60.1.4 encryptionAtHost=
+--- 6. outbound right after deploy, BEFORE stop/start (prediction: still REACHABLE - the change reaches a NIC only after deallocate) ---
+  vm-as-1: run command exit=0 outbound=REACHABLE http=200
+  vm-as-2: run command exit=0 outbound=REACHABLE http=200
+--- 7. after stop/start in the portal (20:31:40) ---
+  activity log, deallocate/start in the last 30 min (may lag):
+    20:28:35 Microsoft.Compute/virtualMachines/deallocate/action Succeeded [vm-as-1]
+  prediction: outbound UNREACHABLE on both; Run Command still works (it does not use the internet); private IPs unchanged.
+  vm-as-1: run command exit=0 privateIP=10.3.0.4 outbound=UNREACHABLE  datadisk=
+  vm-as-2: run command exit=0 privateIP=10.60.1.4 outbound=UNREACHABLE  datadisk=
+--- 8. what-if pass 3: applyFixes=true after deploy (expect only the known noise; no defaultOutboundAccess or tag lines) ---
+  what-if exit=0
+  lines mentioning defaultOutboundAccess (expect 0): 0
+  lines adding tags (expect 0): 0
+  Resource changes: 6 to modify, 3 no change, 7 to ignore.
+  leak check (should be 0): 0
+--- 9. findings ---
+  F1: the linter (adminusername-should-not-be-literal, an error in bicepconfig.json) blocked the first build; fixed with an adminUsername parameter. Caught locally before Azure.
+  F2: what-if pass 1 (applyFixes=false): 0 real drift; 6 Modify lines are all noise (undeclared defaults / read-only values), 3 NoChange, 7 Ignore (undeclared on purpose).
+  F3: pass 2 (applyFixes=true) added exactly the two fixes: tags on disk-lab6-data and defaultOutboundAccess=false on both subnets. Deployed 20:26:07 -> 20:26:43 (Succeeded); private IPs unchanged (the dynamic-IP "- privateIPAddress" line was noise).
+  F4: the private-subnet change did NOT affect running VMs: outbound still REACHABLE (http 200) right after the deploy. After a portal stop (deallocate) and start: UNREACHABLE on both, Run Command still worked, and the vm-as-2 Overview banner "Your VM has a default outbound IP" was gone (checked in the portal by Jeff). Matches Microsoft docs: existing VMs must be stopped and deallocated.
+  F5: Microsoft docs say "The Azure portal already defaults to private subnets", but the VNet created from the VM wizard here had defaultOutboundAccess unset (default outbound on). Fixed through code.
+  F6: what-if pass 3 after the deploy: no defaultOutboundAccess or tag lines; only the known noise.
+  F7: my "datadisk=" check in section 7 was broken (findmnt given two paths); the mount was re-checked in lab6-07 before teardown.
+  F8: by 20:31 the activity log showed only vm-as-1 deallocate (20:28:35); the rest had not been ingested yet.

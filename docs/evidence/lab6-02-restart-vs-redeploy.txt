@@ -1,0 +1,62 @@
+=== Lab 6 M2: restart vs redeploy on vm-as-1, 2026-11-05 19:32 ===
+--- probe 1/3: baseline (19:32:55) ---
+  azure: power=VM_running faultDomain=0 updateDomain=0
+  run command exit=0
+  vm: markers_written=00:33:03Z
+  vm: boot=2026-11-06T00:13:42
+  vm: physical_host_hash=dc1243b19f3d
+  vm: temp_disk=/dev/sdb1
+  vm: temp_marker=PRESENT_written_00:33:03Z
+  vm: os_marker=PRESENT_written_00:33:03Z
+  vm: ip=10.3.0.4
+  leak check, GUIDs and emails (should be 0): 0
+--- probe 2/3: after-restart (19:34:51) ---
+  azure: power=VM_running faultDomain=0 updateDomain=0
+  activity log, power operations on vm-as-1 in the last 2 h (can lag a few minutes):
+    19:33:47 Microsoft.Compute/virtualMachines/restart/action Started
+    19:33:47 Microsoft.Compute/virtualMachines/restart/action Accepted
+  run command exit=0
+  vm: boot=2026-11-06T00:34:26
+  vm: physical_host_hash=dc1243b19f3d
+  vm: temp_disk=/dev/sdb1
+  vm: temp_marker=PRESENT_written_00:33:03Z
+  vm: os_marker=PRESENT_written_00:33:03Z
+  vm: ip=10.3.0.4
+  leak check, GUIDs and emails (should be 0): 0
+--- probe 3/3: after-redeploy (19:37:35) ---
+  azure: power=VM_running faultDomain=0 updateDomain=0
+  activity log, power operations on vm-as-1 in the last 2 h (can lag a few minutes):
+    19:33:47 Microsoft.Compute/virtualMachines/restart/action Started
+    19:33:47 Microsoft.Compute/virtualMachines/restart/action Accepted
+    19:34:22 Microsoft.Compute/virtualMachines/restart/action Succeeded
+    19:35:42 Microsoft.Compute/virtualMachines/Redeploy/action Started
+    19:35:42 Microsoft.Compute/virtualMachines/Redeploy/action Accepted
+  run command exit=0
+  vm: boot=2026-11-06T00:37:23
+  vm: physical_host_hash=416ee7f8cc0f
+  vm: temp_disk=/dev/sdb1
+  vm: temp_marker=ABSENT
+  vm: os_marker=PRESENT_written_00:33:03Z
+  vm: ip=10.3.0.4
+--- SUMMARY (baseline | after restart | after redeploy) ---
+  physical_host_hash   dc1243b19f3d | dc1243b19f3d | 416ee7f8cc0f
+  temp_marker          PRESENT_written_00:33:03Z | PRESENT_written_00:33:03Z | ABSENT
+  os_marker            PRESENT_written_00:33:03Z | PRESENT_written_00:33:03Z | PRESENT_written_00:33:03Z
+  boot                 2026-11-06T00:13:42 | 2026-11-06T00:34:26 | 2026-11-06T00:37:23
+  ip                   10.3.0.4 | 10.3.0.4 | 10.3.0.4
+  faultDomain          0 | 0 | 0
+  updateDomain         0 | 0 | 0
+  leak check, GUIDs and emails (should be 0): 0
+--- activity log re-check: redeploy completion (it had not arrived by probe 3) ---
+    19:35:42 Microsoft.Compute/virtualMachines/Redeploy/action Started
+    19:35:42 Microsoft.Compute/virtualMachines/Redeploy/action Accepted
+    19:37:26 Microsoft.Compute/virtualMachines/Redeploy/action Succeeded
+--- findings ---
+  Predictions recorded before the test: restart = same host, temp marker kept; redeploy = different host, temp marker lost, OS marker kept, private IP same (not certain), fault/update domain unknown.
+  F1: restart kept the same physical host (hash dc1243b19f3d) and the temp disk contents. Restart requested 19:33:47, Succeeded 19:34:22, guest boot 00:34:26Z (19:34:26 ET).
+  F2: redeploy moved the VM to a new physical host (hash 416ee7f8cc0f) and wiped the temp disk (/dev/sdb1 on /mnt: marker ABSENT). The OS disk marker and the private IP 10.3.0.4 were kept. Redeploy requested 19:35:42, guest boot 00:37:23Z (19:37:23 ET): about 1 min 41 s.
+  F3: fault domain and update domain stayed 0/0 after redeploy: the new host keeps the VM in the same place in the availability set.
+  F4: physical host identity read from the Hyper-V key-value exchange file (/var/lib/hyperv/.kvp_pool_3, key PhysicalHostName) and logged only as a 12-character SHA-256 prefix; the host name itself is not published.
+  F5: the temp disk is scratch space only. Anything that must survive redeploy (or deallocate, or a resize that changes host) belongs on a managed disk.
+  F6: the guest clock is UTC; the activity log times above are converted to Eastern.
+  RESULT M2: all predictions held; the private IP prediction (same) was confirmed.

@@ -1,0 +1,58 @@
+=== Lab 6 M4: encryption at host + disk network access, 2026-11-05 19:58 ===
+--- 1. register Microsoft.Compute/EncryptionAtHost (subscription-level; free; no effect on existing VMs) ---
+  state before: NotRegistered
+  register exit=0 at 19:58:34
+  +   4s state=Registered
+  provider re-register (propagates the feature) exit=0; provider state: Registered
+--- 2. negative test: enable encryption at host on vm-as-1 while RUNNING (prediction: rejected; must be deallocated) ---
+  vm-as-1 power: VM running
+  exit=1
+  ERROR: (OperationNotAllowed) 'securityProfile.encryptionAtHost' can be updated only when VM is in deallocated state.
+  Code: OperationNotAllowed
+  Message: 'securityProfile.encryptionAtHost' can be updated only when VM is in deallocated state.
+  vm-as-1 encryptionAtHost after the attempt: not set
+  vm-as-1 power after the attempt: VM running
+  RESULT: rejected as predicted
+  leak check, GUIDs and emails (should be 0): 0
+--- 3. after enabling in the portal (deallocate -> Disks > Additional settings -> start) ---
+  vm-as-1: encryptionAtHost=True securityType=TrustedLaunch power=VM running
+  vm-as-2: encryptionAtHost=not set securityType=TrustedLaunch power=VM running
+  activity log, vm-as-1 power and write operations in the last 1 h:
+    19:58:43 Microsoft.Compute/virtualMachines/write Failed
+--- 4. disks: SSE type and network access BEFORE the OS disk fix ---
+  disk-lab6-data: encryption=EncryptionAtRestWithPlatformKey networkAccess=DenyAll publicNetworkAccess=Disabled attachedTo=vm-as-1
+  disk-lab6-restored: encryption=EncryptionAtRestWithPlatformKey networkAccess=DenyAll publicNetworkAccess=Disabled attachedTo=vm-as-2
+  vm-as-1_OsDisk_1_<suffix>: encryption=EncryptionAtRestWithPlatformKey networkAccess=AllowAll publicNetworkAccess=Enabled attachedTo=vm-as-1
+  vm-as-2_OsDisk_1_<suffix>: encryption=EncryptionAtRestWithPlatformKey networkAccess=AllowAll publicNetworkAccess=Enabled attachedTo=vm-as-2
+--- 5. fix: set every disk still allowing export to DenyAll / Disabled (CLI) ---
+  vm-as-1_OsDisk_1_<suffix>: update exit=0
+  vm-as-2_OsDisk_1_<suffix>: update exit=0
+--- 6. disks AFTER the fix ---
+  disk-lab6-data: encryption=EncryptionAtRestWithPlatformKey networkAccess=DenyAll publicNetworkAccess=Disabled
+  disk-lab6-restored: encryption=EncryptionAtRestWithPlatformKey networkAccess=DenyAll publicNetworkAccess=Disabled
+  vm-as-1_OsDisk_1_<suffix>: encryption=EncryptionAtRestWithPlatformKey networkAccess=DenyAll publicNetworkAccess=Disabled
+  vm-as-2_OsDisk_1_<suffix>: encryption=EncryptionAtRestWithPlatformKey networkAccess=DenyAll publicNetworkAccess=Disabled
+  disks still allowing export (expect 0): 0
+--- 7. guest still healthy after deallocate/start (data disk via fstab nofail) ---
+  run command exit=0
+  vm: boot=2026-11-06T01:02:02
+  vm: datadrive=/dev/sda1
+  vm: payload_checksum=MATCH
+  vm: temp_marker=ABSENT
+  leak check, GUIDs and emails (should be 0): 0
+--- activity log re-check: portal deallocate / write / start on vm-as-1 (not ingested at step 5) ---
+    19:58:43 Microsoft.Compute/virtualMachines/write Failed
+    20:00:24 Microsoft.Compute/virtualMachines/deallocate/action Succeeded
+    20:01:28 Microsoft.Compute/virtualMachines/write Succeeded
+--- 8. findings ---
+  Predictions recorded before the test: (1) registration takes a few minutes; (2) enabling on a running VM is rejected; (3) disk SSE type unchanged after enabling.
+  F1: prediction 1 was WRONG: the feature went NotRegistered -> Registered in 4 s. The CLI then requires "az provider register -n Microsoft.Compute" to propagate it (done).
+  F2: prediction 2 held: OperationNotAllowed, "securityProfile.encryptionAtHost can be updated only when VM is in deallocated state." The failed write is in the activity log at 19:58:43; the VM kept running.
+  F3: prediction 3 held: after deallocate -> enable (portal, Disks > Additional settings) -> start, vm-as-1 shows encryptionAtHost=True and every disk is still EncryptionAtRestWithPlatformKey. Encryption at host adds host-side encryption (temp disk, caches, data in transit to Storage); it does not replace server-side encryption.
+  F4: portal text (closes M1 F11): "Azure Disk Encryption can't be enabled on disks that have encryption at host enabled." "Azure Disk Encryption for virtual machines and virtual machine scale sets will be retired on 15 September 2028 ... migrate to encryption at host." "ADE settings can only be updated while the virtual machine is running." Encryption at host is the opposite: deallocated only.
+  F5: both OS disks created by the VM wizard were networkAccessPolicy AllowAll / publicNetworkAccess Enabled (same default as M3 F2). Fixed: data disk in the portal (Networking > Disable public and private access), OS disks with az disk update. All 4 disks now DenyAll / Disabled.
+  F6: after deallocate/start the data disk device name changed from /dev/sdc1 to /dev/sda1. It still mounted at /datadrive with a matching checksum because fstab uses the filesystem UUID (and nofail). A device-name fstab entry would have broken here.
+  F7: the temp disk marker is ABSENT after deallocate/start: deallocating releases the host, so the temp disk is lost (as with redeploy, M2 F2).
+  F8: OS disk names end in a 32-hex random suffix; shortened to <suffix> in this file for consistency (not a subscription or tenant ID).
+  RESULT M4: encryption at host on vm-as-1 (vm-as-2 left without it for comparison); all disks DenyAll export.
+  leak check (should be 0): 0

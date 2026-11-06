@@ -143,10 +143,42 @@ Each milestone: **portal first** (how the exam asks about it), then **codify in 
 - Five RCAs in `docs/rca/`; interview guide in `docs/interview-guide.md`.
 - Estimated project cost: M1 ~$0.20-0.25, M2 ~$0.02, M3 ~$0.10 (estimates from list prices and run times; confirm in Cost Management).
 
+## Lab 6 Outcomes and Deviations (2026-11-05)
+
+Added after the project was complete, as part of the AZ-104 lab series: VM operations not covered by M3 (resize and move were already done there, so they weren't repeated).
+
+**Deviations from the plan**
+- **vm-as-1 on the VNet's `default` subnet (10.3.0.0/24)**, not `snet-vm`: the portal kept its default network settings for the first VM; `vnet-lab6` ended up with two address spaces. Kept as built; the Bicep matches it.
+- **Auto-shutdown notification** left on for vm-as-1 (it holds an email address), so the schedules were not codified.
+- **Encryption at host enabled through the portal** after registering the feature from the CLI (subscription-level, free).
+- **Default outbound access** turned out to be on; fixed through Bicep in M6 (not in the original plan).
+
+**Predictions that were wrong (recorded)**
+- Removing a VM from its availability set would be rejected: it was a **silent no-op** (exit 0, no change).
+- `EncryptionAtHost` registration would take minutes: **4 s**.
+- A failed extension would put the VM in a Failed provisioning state: the **VM stayed Succeeded**; only the extension failed.
+
+**Measured results**
+
+| Test | Result | Evidence |
+|---|---|---|
+| Availability set placement | vm-as-1 FD0/UD0, vm-as-2 FD1/UD1 (Aligned, 2 FD / 5 UD) | `lab6-01` |
+| Change the set | Remove: silent no-op; move: `PropertyChangeNotAllowed` | `lab6-01` |
+| Restart | Same physical host, temp disk kept; 35 s request to Succeeded | `lab6-02` |
+| Redeploy | New host, temp disk wiped, OS disk/IP/FD/UD kept; ~1 min 41 s request to guest boot | `lab6-02` |
+| Snapshot online | Incremental snapshot of a mounted disk; export disabled | `lab6-03` |
+| Online expansion | 4 → 8 GiB with the VM running; guest needed a rescan, then `growpart` + `resize2fs` | `lab6-03` |
+| Restore | Disk from snapshot on vm-as-2: checksum match, point-in-time contents | `lab6-03` |
+| Encryption at host | Running VM rejected; deallocate → enable → start; SSE unchanged | `lab6-04` |
+| Disk export | 3 of 4 disks were AllowAll (VM wizard defaults); all set to DenyAll | `lab6-04` |
+| Extension failure | Detected by the CLI and the instance view, not by VM state or the portal Overview; fixed in ~8 min | `lab6-05`, RCA-006 |
+| Bicep | 0 real drift; 2 fixes deployed in 36 s; outbound blocked only after deallocate/start | `lab6-06` |
+| Teardown | 16 resources deleted with the resource group in ~2 min; 0 VMs, disks, snapshots left | `lab6-07` |
+
 ## Out of Scope (conceptual only)
 
 - **Custom domains and certificates** for App Service: they need a domain you own.
-- **Azure Disk Encryption** is on Microsoft's retirement path; encryption at host is the replacement and is covered in the README if it can't be enabled at no cost.
+- **Azure Disk Encryption** is on Microsoft's retirement path (the portal says 15 September 2028); encryption at host is the replacement and was enabled in Lab 6 M4.
 - **App Service backup** needs a storage account and the Standard tier; covered if time allows during M1.
 
 ## Safety

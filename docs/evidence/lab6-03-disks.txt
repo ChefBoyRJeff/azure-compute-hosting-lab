@@ -1,0 +1,57 @@
+=== Lab 6 M3: data disk, snapshot, expand, restore, 2026-11-05 19:42 ===
+--- 1. Azure view: disk-lab6-data ---
+  disk-lab6-data: sizeGB=4 sku=StandardSSD_LRS state=Attached encryption=EncryptionAtRestWithPlatformKey attachedTo=vm-as-1 lun=0
+--- 2. inside vm-as-1: partition, format, mount (fstab by UUID, nofail), write 20 MB payload ---
+  run command exit=0
+  vm: data_disk_lun0=/dev/sdc
+  vm: formatted=/dev/sdc1
+  vm: payload_sha256_prefix=3b5d770748d58282
+  vm: fstab_entry=1
+  vm: fs_size_used= 3.9G 21M
+  vm: NAME   SIZE FSTYPE MOUNTPOINT
+  vm: sdc      4G        
+  vm: sdc1   4G ext4   /datadrive
+  leak check, GUIDs and emails (should be 0): 0
+--- 3. snapshot (taken in the portal while the disk was attached and mounted) ---
+  snap-lab6-data: incremental=True sizeGB=4 source=disk-lab6-data state=Succeeded completion=% networkAccess=DenyAll publicNetworkAccess=Disabled created=19:45:14
+--- 4. change the disk AFTER the snapshot (must NOT appear in the restored copy) ---
+  run command exit=0
+  vm: after_snapshot_written=00:45:39Z
+  vm: file=after-snapshot.txt bytes=10
+  vm: file=lost+found bytes=16384
+  vm: file=payload.bin bytes=20971520
+  vm: file=payload.sha256 bytes=65
+  leak check, GUIDs and emails (should be 0): 0
+--- 5. online expansion: 4 -> 8 GiB in the portal, VM running ---
+  Azure: disk-lab6-data sizeGB=8 power=VM running
+  run command exit=0
+  vm: before_rescan: disk=4294967296 part=4292870144 fs=4141580288
+  vm: after_rescan:  disk=8589934592 part=4292870144 fs=4141580288
+  vm: CHANGED: partition=1 start=2048 old: size=8384512 end=8386559 new: size=16775135 end=16777182
+  vm: after_grow:    disk=8589934592 part=8588869120 fs=8368103424
+  vm: fs_human= 7.8G 21M 7.4G
+  vm: payload_checksum=MATCH
+  leak check, GUIDs and emails (should be 0): 0
+--- 6. restore: disk from snapshot, attached to vm-as-2, mounted read-only ---
+  disk-lab6-data: sizeGB=8 sku=StandardSSD_LRS source=Empty attachedTo=vm-as-1 networkAccess=AllowAll
+  disk-lab6-restored: sizeGB=4 sku=StandardSSD_LRS source=snap-lab6-data attachedTo=vm-as-2 networkAccess=DenyAll
+  run command exit=0
+  vm-as-2: restored_disk_lun0=/dev/sdc size=4G fs_label=lab6data
+  vm-as-2: mount=/dev/sdc1 ro
+  vm-as-2: file=lost+found bytes=16384
+  vm-as-2: file=payload.bin bytes=20971520
+  vm-as-2: file=payload.sha256 bytes=65
+  vm-as-2: payload_checksum=MATCH
+  vm-as-2: payload_sha256_prefix=3b5d770748d58282
+  vm-as-2: after_snapshot_file=ABSENT (point-in-time copy)
+  SUMMARY payload checksum prefix: original=3b5d770748d58282 restored=3b5d770748d58282 -> SAME
+  leak check, GUIDs and emails (should be 0): 0
+--- 7. findings ---
+  Predictions recorded before the test: (1) a snapshot can be taken with the disk attached and mounted; (2) after expansion the guest sees 8 GiB but the filesystem stays 4 GiB until grown; (3) the restored disk is 4 GiB, its checksum matches, and after-snapshot.txt is absent. All three held.
+  F1: online expansion takes three steps. Azure showed 8 GiB with the VM running, but the guest still saw 4294967296 bytes until a SCSI rescan (echo 1 > /sys/class/block/sdc/device/rescan); then growpart and resize2fs grew the partition and ext4 to 7.8G with no unmount. Payload checksum unchanged.
+  F2: disk-lab6-data, created from the VM blade (Create and attach a new disk), has networkAccessPolicy AllowAll: export through a SAS download link is allowed by default and that form does not show the setting. The snapshot and the restored disk, created through their full create forms with Networking set, are DenyAll / publicNetworkAccess Disabled. Remediated in M4.
+  F3: the restored disk keeps the original filesystem UUID and label (lab6data). It was attached to vm-as-2, not next to the original on vm-as-1, so the fstab UUID entry cannot match the wrong disk; it was mounted read-only and not added to fstab.
+  F4: the snapshot was crash-consistent: sync ran before it, and the payload verified after restore. An application-consistent copy (databases) needs the app quiesced or Azure Backup with pre/post scripts.
+  F5: az printed "Unable to encode the output with cp1252 encoding. Unsupported characters are discarded." in step 3: a character in the VM output that the Windows console code page cannot show was dropped. No data affected (all checks matched).
+  F6: snapshot completionPercent was empty (not 100) after the snapshot reached Succeeded.
+  RESULT M3: data disk attached and mounted by LUN; snapshot taken online; disk expanded online to 8 GiB; snapshot restored to another VM with a matching checksum and point-in-time contents.

@@ -1,0 +1,89 @@
+=== Lab 6 M5: Custom Script Extension failure on vm-as-2, 2026-11-05 20:05 ===
+--- 1. before ---
+  vm-as-2 provisioningState=Succeeded power=VM running
+  extensions: 
+--- 2. break: bootstrap script that needs /etc/lab6/app.conf, which was never staged ---
+  settings: {"commandToExecute": "sh -c 'mkdir -p /opt/lab6app && cp /etc/lab6/app.conf /opt/lab6app/app.conf && echo configured > /opt/lab6app/status'"}
+  extension set exit=1 after 34 s
+  ERROR: (VMExtensionProvisioningError) VM has reported a user failure when processing extension 'CustomScript'. Please correct the error and try again. (publisher 'Microsoft.Azure.Extensions' and type 'CustomScript'). Error code: '2'. Error message: 'failed to execute command: command terminated with exit status=1
+  [stdout]
+  [stderr]
+  cp: cannot stat '/etc/lab6/app.conf': No such file or directory
+  : failed to execute command: command terminated with exit status=1'. Detailed error: ''. More information on troubleshooting is available at https://aka.ms/VMExtensionCSELinuxTroubleshoot.
+  Code: VMExtensionProvisioningError
+  Message: VM has reported a user failure when processing extension 'CustomScript'. Please correct the error and try again. (publisher 'Microsoft.Azure.Extensions' and type 'CustomScript'). Error code: '2'. Error message: 'failed to execute command: command terminated with exit status=1
+  [stdout]
+  [stderr]
+  cp: cannot stat '/etc/lab6/app.conf': No such file or directory
+  : failed to execute command: command terminated with exit status=1'. Detailed error: ''. More information on troubleshooting is available at https://aka.ms/VMExtensionCSELinuxTroubleshoot.
+--- 3. after: provisioning state vs power state ---
+  vm-as-2 provisioningState=Succeeded power=VM running
+--- 4. instance view: extension status (what the portal Extensions blade shows) ---
+  CustomScript: code=ProvisioningState/failed/0 level=Error display=Provisioning failed
+      | failed to execute command: command terminated with exit status=1
+      | [stdout]
+      | [stderr]
+      | cp: cannot stat '/etc/lab6/app.conf': No such file or directory
+      | : failed to execute command: command terminated with exit status=1
+--- 5. inside the VM: extension handler log and the script's stderr/stdout (Run Command) ---
+  run command exit=0
+  vm: --- /var/log/azure/custom-script/handler.log (last 12 lines) ---
+  vm: tail: cannot open '/var/log/azure/custom-script/handler.log' for reading: No such file or directory
+  vm: --- /var/lib/waagent/custom-script/download/0/stderr ---
+  vm: cp: cannot stat '/etc/lab6/app.conf': No such file or directory
+  vm: --- /var/lib/waagent/custom-script/download/0/stdout ---
+  vm: --- /opt/lab6app ---
+  vm: total 0
+--- 6. does an unrelated change work while the extension is failed? (add a tag; prediction: unknown) ---
+  tag update exit=0
+  tag lab6test now: extension-failed
+  vm-as-2 provisioningState=Succeeded power=VM running
+  leak check (should be 0): 0
+--- 7. after portal uninstall of CustomScript ---
+  vm-as-2 provisioningState=Succeeded power=VM running
+  extensions: 
+--- 8. fix: corrected script creates its prerequisite (idempotent) ---
+  settings: {"commandToExecute": "sh -c 'mkdir -p /etc/lab6 /opt/lab6app && [ -f /etc/lab6/app.conf ] || echo setting=1 > /etc/lab6/app.conf; cp /etc/lab6/app.conf /opt/lab6app/app.conf && echo configured > /opt/lab6app/status'"}
+  extension set exit=0 after 34 s
+--- 9. verify ---
+  vm-as-2 provisioningState=Succeeded power=VM running
+  CustomScript: code=ProvisioningState/succeeded display=Provisioning succeeded
+  run command exit=0
+  vm: status_file=configured
+  vm: app_conf=setting=1
+  activity log, extension and VM writes on vm-as-2 in the last 1 h (may lag):
+  leak check (should be 0): 0
+--- activity log re-check: everything on vm-as-2 and its extension in the last 2 h ---
+    20:06:54 Microsoft.Authorization/policies/audit/action Succeeded [vm-as-2]
+    20:06:54 Microsoft.Authorization/policies/auditIfNotExists/action Succeeded [vm-as-2]
+    20:06:58 Microsoft.Authorization/policies/audit/action Succeeded [vm-as-2]
+    20:06:58 Microsoft.Authorization/policies/auditIfNotExists/action Succeeded [vm-as-2]
+    20:07:06 Microsoft.Authorization/policies/audit/action Succeeded [vm-as-2]
+    20:12:53 Microsoft.Compute/virtualMachines/extensions/delete Succeeded [vm-as-2/extensions/CustomScript]
+    20:13:56 Microsoft.Compute/virtualMachines/extensions/write Succeeded [vm-as-2/extensions/CustomScript]
+--- where the Custom Script Extension actually logs (my handler.log path was wrong) ---
+  run command exit=0
+  vm: /var/log/azure/Microsoft.Azure.Extensions.CustomScript/CommandExecution.log
+  vm: /var/log/azure/Microsoft.Azure.Extensions.CustomScript/handler.log
+  vm: /var/log/azure/run-command/handler.log
+  vm: /var/log/azure/Microsoft.CPlat.Core.RunCommandLinux/CommandExecution.log
+  vm: --- /var/log/azure/Microsoft.Azure.Extensions.CustomScript/handler.log (failure lines) ---
+  vm: time=2026-11-06T01:06:02Z version=v2.1.19/git@- operation=enable seq=0 event="failed to execute command" error=null output=/var/lib/waagent/custom-script/download/0
+  vm: time=2026-11-06T01:06:02Z version=v2.1.19/git@- operation=enable seq=0 event="enable failed"
+  vm: time=2026-11-06T01:06:02Z version=v2.1.19/git@- operation=enable seq=0 event="failed to handle" error="failed to execute command: command terminated with exit status=1"
+--- portal banner check: default outbound access on the lab subnets ---
+  vnet-lab6/default: defaultOutboundAccess=not set (platform default)
+  vnet-lab6/snet-vm: defaultOutboundAccess=not set (platform default)
+--- cleanup: remove the test tag from vm-as-2 ---
+  remove tag exit=0; tag now: ''
+--- 10. findings ---
+  Predictions recorded before the test: (1) VM provisioning state Failed, power Running; (2) stderr visible in the instance view; (3) unrelated change while failed: unknown; (4) uninstall + corrected script returns to Succeeded.
+  F1: prediction 1 was WRONG. az vm extension set failed (VMExtensionProvisioningError, exit 1, 34 s), but the VM stayed provisioningState=Succeeded / VM running. Only the extension was ProvisioningState/failed/0. The portal Overview showed Status Running with no failure banner; the failure was visible only under Extensions + applications.
+  F2: prediction 2 held: the script stderr ("cp: cannot stat /etc/lab6/app.conf: No such file or directory") appeared in the CLI error, the instance view message, and /var/lib/waagent/custom-script/download/0/stderr.
+  F3: observed for prediction 3: an unrelated VM change (tag) succeeded (exit 0) while the extension was failed.
+  F4: the portal "View detailed status" showed only code ComponentStatus/ErrorClarification/failed/2 (Provisioning failed) with no message. The CLI error and the instance view had the stderr. "Error code 2" matches the CLI text "VM has reported a user failure": the extension handler worked; the script failed.
+  F5: my first handler log path (/var/log/azure/custom-script/handler.log) was wrong; the location found is listed above.
+  F6: prediction 4 held: after Uninstall in the portal, a corrected idempotent script (creates /etc/lab6/app.conf if missing) reported Provisioning succeeded in 34 s; /opt/lab6app/status=configured.
+  F7: the portal Overview of vm-as-2 showed: "Your VM has a default outbound IP, which is insecure and will no longer be assigned by default for new subnets after March 2026." Checked above; remediation planned through code in M6.
+  F8: the corrected CustomScript extension stays installed (Succeeded) until teardown.
+  leak check (should be 0): 0

@@ -1,0 +1,68 @@
+=== Lab 6: VM operations preflight (read-only), 2026-11-05 18:44 ===
+--- 1. repo state ---
+  693f2ad M3+M4: VMSS (zones, Run Command, autoscale investigation, resize, move), 5 RCAs, interview guide, architecture diagram, final teardown
+  c383257 M2: containers - ACR cloud build, ACI identity pull (AcrPull fix), Container Apps probe incident, traffic split, HTTP scale rule, Bicep + what-if, teardown
+  692983e README: M1 App Service status, evidence index, rebuild steps, repo layout
+  uncommitted: 1 item(s) (this new evidence file not counted yet)
+--- 2. account ---
+  subscription: AZ104_PracticeSubscription  state: Enabled
+--- 3. leftovers ---
+  rg-compute-lab exists: false
+  VMs: 0  disks: 0  snapshots: 0  availability sets: 0
+  resource group: rg-hubspoke-lab
+  resource group: NetworkWatcherRG
+  resource group: rg-monitoring-lab
+  resource group: rg-cicd-dev
+  resource group: rg-cicd-prod
+  resource group: rg-backup-lab
+  resource group: DefaultResourceGroup-EUS
+  local vmss-compute-lab_key files in Downloads: 0 (not touched here; delete them yourself)
+--- 4. EncryptionAtHost feature (subscription-level, read only) ---
+  state: NotRegistered
+  Microsoft.Compute provider: Registered
+--- 5. VM sizes in eastus (capabilities and restrictions) ---
+  Standard_B1s       vCPU=1 memGB=1 EncryptionAtHost=True tempDiskMB=4096 zones=3,1,2 restrictions=Zone:NotAvailableForSubscription:2
+  Standard_B1ms      vCPU=1 memGB=2 EncryptionAtHost=True tempDiskMB=4096 zones=3,1,2 restrictions=Zone:NotAvailableForSubscription:2
+  Standard_B2s       vCPU=2 memGB=4 EncryptionAtHost=True tempDiskMB=8192 zones=3,1,2 restrictions=Zone:NotAvailableForSubscription:2
+  Standard_B2ats_v2  vCPU=2 memGB=1 EncryptionAtHost=True tempDiskMB=0 zones=1,2,3 restrictions=none
+  Standard_B2als_v2  vCPU=2 memGB=4 EncryptionAtHost=True tempDiskMB=0 zones=1,2,3 restrictions=none
+--- 6. availability set SKUs in eastus ---
+  availabilitySets/Aligned: max fault domains = 3
+  availabilitySets/Classic: max fault domains = 3
+--- 7. compute quota (eastus) ---
+  Total Regional vCPUs: 0 of 10
+  Virtual Machines: 0 of 25000
+  Availability Sets: 0 of 2500
+  Standard BS Family vCPUs: 0 of 10
+--- 8. policy assignments and exemptions that apply to this subscription ---
+  assignment: Block costly lab resources | enforcement=Default | scope=subscriptions/<id>
+  assignment: ASC Default (subscription: <id>) | enforcement=Default | scope=subscriptions/<id>
+  exemptions: 0
+--- 9. prices (Retail Prices API, eastus, Linux pay-as-you-go) ---
+  Virtual Machines BS Series | B1s | 0.0104 per 1 Hour
+  Standard SSD Managed Disks | E4 LRS Disk | 2.4 per 1/Month
+  Standard SSD Managed Disks | E4 LRS Disk Mount | 0.26 per 1/Month
+  Standard SSD Managed Disks | E4 LRS Disk Operations | 0.002 per 10K
+  Standard HDD Managed Disks | LRS Snapshots | 0.05 per 1 GB/Month
+  Standard HDD Managed Disks | ZRS Snapshots | 0.05 per 1 GB/Month
+--- 10. budgets ---
+  budget budget-az104-lab: spent 0.7606962304344932 of 10.0
+  budget budget-backup-dr-lab: spent 0.1573434 of 5.0
+  budget budget-compute-hosting-lab: spent 0.3440676718550209 of 5.0
+  budget budget-storage-pe-lab: spent 0.0623624513794723 of 5.0
+  partial-GUID leak check (should be 0): 0
+CORRECTION (section 3): the "ERROR: ... --resource-group" line came from "az vm availability-set list", which needs -g. Its count of 0 is not a real check. Re-checked below.
+  availability sets in the subscription (re-check): 0
+--- 11. policy detail: Block costly lab resources ---
+  definition: policyDefinitions/<id>
+  assignment parameters: {"listOfResourceTypesNotAllowed":{"value":["Microsoft.Network/virtualNetworkGateways","Microsoft.Network/azureFirewalls","Microsoft.Network/bastionHosts","Microsoft.Network/natGateways","Microsoft.Network/applicationGateways","Microsoft.Network/expressRouteCircuits","Microsoft.Network/ddosProtectionPlans","Microsoft.Network/virtualHubs","Microsoft.Network/vpnGateways"]}}
+  policy display name: Not allowed resource types  mode: All
+  policy rule: {"if":{"allOf":[{"field":"type","in":"[parameters('listOfResourceTypesNotAllowed')]"},{"exists":true,"value":"[field('type')]"}]},"then":{"effect":"[parameters('effect')]"}}
+  parameter defaults: {"effect":{"allowedValues":["Audit","Deny","Disabled"],"defaultValue":"Deny","metadata":{"description":"Enable or disable the execution of the policy","displayName":"Effect"},"type":"String"},"listOfResourceTypesNotAllowed":{"metadata":{"description":"The list of resource types that cannot be deployed.","displayName":"Not allowed resource types","strongType":"resourceTypes"},"type":"Array"}}
+--- 12. findings ---
+  F1: B1s supports encryption at host (EncryptionAtHostSupported=True); the subscription feature is NotRegistered, so M4 must register it first.
+  F2: the B1s zone 2 restriction does not affect this lab: availability set VMs are not zonal.
+  F3: East US availability sets allow up to 3 fault domains. Design: 2 fault domains, 5 update domains.
+  F4: quota 0 of 10 regional vCPUs and 0 of 10 BS-family vCPUs; the lab needs 2.
+  F5: cost estimate: 2 x B1s at 0.0104/h plus 2-3 E4 disks (2.40/month each, prorated) and one snapshot (0.05 per GB per month, billed on used size): under 0.25 USD for the lab. VMs deallocated between sessions.
+  partial-GUID leak check (should be 0): 0

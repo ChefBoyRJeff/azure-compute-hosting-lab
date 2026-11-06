@@ -1,0 +1,50 @@
+=== Lab 6 M1: availability set (portal build), 2026-11-05 19:28 ===
+--- 1. availability set ---
+  avail-lab6: sku=Aligned faultDomains=2 updateDomains=5 members=2
+--- 2. VMs: where each one landed in the set ---
+  vm-as-1: size=Standard_B1s power=VM running faultDomain=0 updateDomain=0 privateIP=10.3.0.4 publicIP=none
+      securityType=TrustedLaunch encryptionAtHost=not set osDisk=StandardSSD_LRS bootDiagnostics=True availabilitySet=AVAIL-LAB6
+  vm-as-2: size=Standard_B1s power=VM running faultDomain=1 updateDomain=1 privateIP=10.60.1.4 publicIP=none
+      securityType=TrustedLaunch encryptionAtHost=not set osDisk=StandardSSD_LRS bootDiagnostics=True availabilitySet=AVAIL-LAB6
+--- 3. inbound exposure ---
+  vm-as-1-nsg: custom rules=0 (expect 0: only default rules, DenyAllInBound from outside the VNet)
+  vm-as-2-nsg: custom rules=0 (expect 0: only default rules, DenyAllInBound from outside the VNet)
+  public IPs in rg-compute-lab: 0 (expect 0)
+--- 4. auto-shutdown schedules ---
+  shutdown-computevm-vm-as-1: status=Enabled time=2200 timeZone=Eastern Standard Time
+  shutdown-computevm-vm-as-2: status=Enabled time=2200 timeZone=Eastern Standard Time
+--- 5. negative test: take vm-as-2 out of the availability set (prediction: rejected) ---
+  exit=0
+  vm-as-2 availability set after the attempt: AVAIL-LAB6
+  RESULT: NOT as predicted - recorded
+  partial-GUID leak check (should be 0): 0
+NOTE: section 5 RESULT is correct as written: prediction (rejected with an error) was WRONG. Observed: exit 0 and no change. Investigated below.
+--- 6. VNet per VM (open item: vm-as-1 is 10.3.0.4, vm-as-2 is 10.60.1.4) ---
+  vm-as-1: vnet=vnet-lab6 subnet=default (vnet resource group=rg-compute-lab)
+  vm-as-2: vnet=vnet-lab6 subnet=snet-vm (vnet resource group=rg-compute-lab)
+  VNet vnet-lab6: address space=10.3.0.0/16,10.60.0.0/16 subnets=default 10.3.0.0/24; snet-vm 10.60.1.0/24
+--- 7. did the section 5 no-op write to vm-as-2? (activity log, last 60 min; can lag a few minutes) ---
+  19:27:15 Microsoft.Compute/virtualMachines/write Started
+  19:27:15 Microsoft.Compute/virtualMachines/write Accepted
+  19:28:04 Microsoft.Compute/virtualMachines/write Succeeded
+--- 8. negative test 2: move vm-as-2 into a different availability set (prediction: rejected with an error) ---
+  created avail-lab6-b (free; test only): exit=0
+  exit=1
+  ERROR: (PropertyChangeNotAllowed) Changing property 'availabilitySet.id' is not allowed.
+  Code: PropertyChangeNotAllowed
+  Message: Changing property 'availabilitySet.id' is not allowed.
+  Target: availabilitySet.id
+  vm-as-2 availability set after the attempt: AVAIL-LAB6
+  vm-as-2 power: VM running
+  RESULT: rejected as predicted; still in avail-lab6
+  deleted avail-lab6-b: exit=0; availability sets left: avail-lab6
+--- 9. portal findings (recorded from the portal, Jeff) ---
+  F6: creating vm-as-2 in avail-lab6, the portal defaulted to a new VNet and said: "The selected availability set requires virtual network 'vnet-lab6'."
+  F7: the portal also defaulted to a new public IP for vm-as-2; changed to None (section 3 confirms 0 public IPs).
+  leak check, GUIDs and emails (should be 0): 0
+--- 10. findings ---
+  F8: both VMs are in vnet-lab6 but on different subnets: vm-as-1 on default (10.3.0.0/24, the portal default kept when vm-as-1 was created), vm-as-2 on snet-vm (10.60.1.0/24). vnet-lab6 has two address spaces, 10.3.0.0/16 and 10.60.0.0/16; the exact portal steps that added the second were not recorded. The availability set requires the same VNet, not the same subnet. Deviation from the plan, kept as is; the M6 Bicep must match it.
+  F9: "az vm update --remove availabilitySet" was a silent no-op: a real virtualMachines/write (Started 19:27:15, Succeeded 19:28:04), exit 0, but the VM stayed in avail-lab6. Hypothesis (not confirmed): the PUT left the property out and the platform treated that as no change. Lesson: verify the resulting state; an exit code of 0 does not prove a change happened.
+  F10: moving vm-as-2 to another set is rejected: PropertyChangeNotAllowed, "Changing property 'availabilitySet.id' is not allowed." The availability set is set only at VM creation; to change it, recreate the VM (keeping its disks).
+  F11: the Encryption at host text on the portal Disks tab was not captured during the build; re-checked in M4 after the feature is registered.
+  RESULT M1: availability set Aligned, 2 fault domains / 5 update domains; vm-as-1 FD0/UD0, vm-as-2 FD1/UD1 (separate racks and separate update groups); 0 public IPs; 0 custom inbound rules.
