@@ -48,3 +48,12 @@
   az network public-ip list     exit=255 -o was unexpected at this time.
   az vm availability-set list   exit=255 -o was unexpected at this time.
   NOTE: if a command other than "vm availability-set list" failed, the lab6-00 CORRECTION blamed the wrong command; the 0 counts from a failed command were not real checks. Teardown itself is verified by "rg-compute-lab exists: false" and the subscription-wide checks above.
+--- 6. which list command (re-run, called directly) ---
+  CORRECTION: section 5 above was itself broken: running az through Invoke-Expression made az.cmd fail on the parentheses in the query ("-o was unexpected at this time", exit 255) for every command. Re-run below without Invoke-Expression.
+  az vm list                    exit=0 count=0
+  az disk list                  exit=2 ERROR: the following arguments are required: --resource-group/-g
+  az snapshot list              exit=0 count=0
+  az network public-ip list     exit=0 count=0
+  az vm availability-set list   exit=0 count=0
+  RESULT: command(s) that require -g: disk list
+  The lab6-00 CORRECTION blamed 'vm availability-set list'; that was incomplete or wrong - see the RESULT line.
